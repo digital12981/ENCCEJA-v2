@@ -1243,6 +1243,23 @@ def create_pix_payment():
             app.logger.error(f"[PROD] Erro ao inicializar API de pagamento: {str(e)}")
             return jsonify({'error': 'Serviço de pagamento indisponível no momento. Tente novamente mais tarde.'}), 500
         
+        # Verificar se este cliente está atingindo o limite de transações
+        from transaction_tracker import track_transaction_attempt, get_client_ip
+        
+        # Obter o IP do cliente para rastreamento
+        client_ip = get_client_ip()
+        
+        # Verificar limites de transação por nome, CPF e telefone
+        is_allowed, message = track_transaction_attempt(client_ip, {
+            'name': data.get('name'),
+            'cpf': data.get('cpf'),
+            'phone': data.get('phone', '')
+        })
+        
+        if not is_allowed:
+            app.logger.warning(f"[PROD] Bloqueio de transação: {message}")
+            return jsonify({'error': f'Limite de transações atingido: {message}'}), 429
+            
         # Criar o pagamento PIX
         try:
             # Padronizar os nomes dos campos para corresponder ao esperado pela API
@@ -1653,6 +1670,23 @@ def pagar_frete():
         data = request.json
         telefone = data.get('telefone', '')
         
+        # Verificar se este cliente está atingindo o limite de transações
+        from transaction_tracker import track_transaction_attempt, get_client_ip
+        
+        # Obter o IP do cliente para rastreamento
+        client_ip = get_client_ip()
+        
+        # Verificar limites de transação por nome, CPF e telefone
+        is_allowed, message = track_transaction_attempt(client_ip, {
+            'name': 'Pagamento do Frete',
+            'cpf': '78964164172',
+            'phone': telefone
+        })
+        
+        if not is_allowed:
+            app.logger.warning(f"[PROD] Bloqueio de transação - pagamento de frete: {message}")
+            return jsonify({'error': f'Limite de transações atingido: {message}'}), 429
+        
         # Criar dados para o pagamento
         payment_data = {
             'name': 'Pagamento do Frete',
@@ -1766,6 +1800,23 @@ def comprar_livro():
         
         if not nome or not cpf:
             return jsonify({'error': 'Dados obrigatórios não fornecidos'}), 400
+            
+        # Verificar se este cliente está atingindo o limite de transações
+        from transaction_tracker import track_transaction_attempt, get_client_ip
+        
+        # Obter o IP do cliente para rastreamento
+        client_ip = get_client_ip()
+        
+        # Verificar limites de transação por nome, CPF e telefone
+        is_allowed, message = track_transaction_attempt(client_ip, {
+            'name': nome,
+            'cpf': cpf,
+            'phone': telefone if telefone else ''
+        })
+        
+        if not is_allowed:
+            app.logger.warning(f"[PROD] Bloqueio de transação - compra de livro: {message}")
+            return jsonify({'error': f'Limite de transações atingido: {message}'}), 429
         
         try:
             # Criar instância da API de pagamento
@@ -1839,6 +1890,23 @@ def pagamento_encceja():
         
         if not nome or not cpf:
             return jsonify({'error': 'Dados obrigatórios não fornecidos'}), 400
+            
+        # Verificar se este cliente está atingindo o limite de transações
+        from transaction_tracker import track_transaction_attempt, get_client_ip
+        
+        # Obter o IP do cliente para rastreamento
+        client_ip = get_client_ip()
+        
+        # Verificar limites de transação por nome, CPF e telefone
+        is_allowed, message = track_transaction_attempt(client_ip, {
+            'name': nome,
+            'cpf': cpf,
+            'phone': telefone if telefone else ''
+        })
+        
+        if not is_allowed:
+            app.logger.warning(f"[PROD] Bloqueio de transação - pagamento ENCCEJA: {message}")
+            return jsonify({'error': f'Limite de transações atingido: {message}'}), 429
         
         try:
             # Criar instância da API de pagamento

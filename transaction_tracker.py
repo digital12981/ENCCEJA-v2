@@ -15,7 +15,17 @@ CLIENT_DATA_TRACKING = {}
 
 # Limite de transações com os mesmos dados
 MAX_TRANSACTION_ATTEMPTS = 5  # Por IP
-MAX_GLOBAL_CLIENT_ATTEMPTS = 10  # Total global para o mesmo cliente
+MAX_GLOBAL_CLIENT_ATTEMPTS = 20  # Total global para o mesmo cliente (aumentado para 20 conforme solicitado)
+
+# Armazena contagens de transações por nome, CPF e telefone
+NAME_TRANSACTION_COUNT = {}  # {"nome_normalizado": {"count": int, "last_attempt": timestamp}}
+CPF_TRANSACTION_COUNT = {}   # {"cpf_normalizado": {"count": int, "last_attempt": timestamp}}
+PHONE_TRANSACTION_COUNT = {} # {"telefone_normalizado": {"count": int, "last_attempt": timestamp}}
+
+# Limite de transações por dados específicos
+MAX_TRANSACTIONS_PER_NAME = 20
+MAX_TRANSACTIONS_PER_CPF = 20
+MAX_TRANSACTIONS_PER_PHONE = 20
 
 # Período de retenção para rastreamento de IP
 IP_BAN_DURATION = timedelta(hours=24)
@@ -122,6 +132,60 @@ def track_transaction_attempt(ip: str, data: Dict[str, Any], transaction_id: Opt
     # Verificar se o IP está banido
     if is_transaction_ip_banned(ip):
         return False, f"IP bloqueado por excesso de tentativas. Tente novamente em {IP_BAN_DURATION.total_seconds() / 3600:.1f} horas."
+    
+    # Extrair e normalizar dados específicos do cliente
+    now = datetime.now()
+    
+    # Verificar nome
+    if 'name' in data and data['name']:
+        name = str(data['name']).lower().strip()
+        if name:
+            # Verificar ou inicializar contagem para este nome
+            if name not in NAME_TRANSACTION_COUNT:
+                NAME_TRANSACTION_COUNT[name] = {"count": 1, "last_attempt": now}
+            else:
+                # Incrementar contagem existente
+                NAME_TRANSACTION_COUNT[name]["count"] += 1
+                NAME_TRANSACTION_COUNT[name]["last_attempt"] = now
+                
+                # Verificar se excedeu o limite
+                if NAME_TRANSACTION_COUNT[name]["count"] > MAX_TRANSACTIONS_PER_NAME:
+                    current_app.logger.warning(f"Nome '{name}' bloqueado por excesso de transações ({MAX_TRANSACTIONS_PER_NAME}+)")
+                    return False, f"Limite de transações excedido para este nome. Tente novamente em 24 horas."
+    
+    # Verificar CPF
+    if 'cpf' in data and data['cpf']:
+        cpf = ''.join(filter(str.isdigit, str(data['cpf'])))
+        if len(cpf) > 0:
+            # Verificar ou inicializar contagem para este CPF
+            if cpf not in CPF_TRANSACTION_COUNT:
+                CPF_TRANSACTION_COUNT[cpf] = {"count": 1, "last_attempt": now}
+            else:
+                # Incrementar contagem existente
+                CPF_TRANSACTION_COUNT[cpf]["count"] += 1
+                CPF_TRANSACTION_COUNT[cpf]["last_attempt"] = now
+                
+                # Verificar se excedeu o limite
+                if CPF_TRANSACTION_COUNT[cpf]["count"] > MAX_TRANSACTIONS_PER_CPF:
+                    current_app.logger.warning(f"CPF '{cpf[:3]}*****{cpf[-2:]}' bloqueado por excesso de transações ({MAX_TRANSACTIONS_PER_CPF}+)")
+                    return False, f"Limite de transações excedido para este CPF. Tente novamente em 24 horas."
+    
+    # Verificar telefone
+    if 'phone' in data and data['phone']:
+        phone = ''.join(filter(str.isdigit, str(data['phone'])))
+        if len(phone) > 0:
+            # Verificar ou inicializar contagem para este telefone
+            if phone not in PHONE_TRANSACTION_COUNT:
+                PHONE_TRANSACTION_COUNT[phone] = {"count": 1, "last_attempt": now}
+            else:
+                # Incrementar contagem existente
+                PHONE_TRANSACTION_COUNT[phone]["count"] += 1
+                PHONE_TRANSACTION_COUNT[phone]["last_attempt"] = now
+                
+                # Verificar se excedeu o limite
+                if PHONE_TRANSACTION_COUNT[phone]["count"] > MAX_TRANSACTIONS_PER_PHONE:
+                    current_app.logger.warning(f"Telefone '{phone[:3]}*****{phone[-2:]}' bloqueado por excesso de transações ({MAX_TRANSACTIONS_PER_PHONE}+)")
+                    return False, f"Limite de transações excedido para este telefone. Tente novamente em 24 horas."
     
     # Criar hash dos dados completos da transação (incluindo valor)
     transaction_hash = hash_transaction_data(data, include_amount=True)
@@ -254,10 +318,37 @@ def cleanup_transaction_tracking():
     for client_hash in expired_clients:
         del CLIENT_DATA_TRACKING[client_hash]
     
+    # Limpar contadores de nome expirados
+    expired_names = [
+        name for name, data in NAME_TRANSACTION_COUNT.items()
+        if data["last_attempt"] < expiry_time
+    ]
+    for name in expired_names:
+        del NAME_TRANSACTION_COUNT[name]
+    
+    # Limpar contadores de CPF expirados
+    expired_cpfs = [
+        cpf for cpf, data in CPF_TRANSACTION_COUNT.items()
+        if data["last_attempt"] < expiry_time
+    ]
+    for cpf in expired_cpfs:
+        del CPF_TRANSACTION_COUNT[cpf]
+    
+    # Limpar contadores de telefone expirados
+    expired_phones = [
+        phone for phone, data in PHONE_TRANSACTION_COUNT.items()
+        if data["last_attempt"] < expiry_time
+    ]
+    for phone in expired_phones:
+        del PHONE_TRANSACTION_COUNT[phone]
+    
     # Logging detalhado para monitoramento
     current_app.logger.info(
         f"Limpeza de rastreamento concluída. Estatísticas de proteção: "
         f"IPs banidos: {len(BANNED_IPS)}, "
         f"IPs rastreados: {len(TRANSACTION_ATTEMPTS)}, "
-        f"Clientes rastreados globalmente: {len(CLIENT_DATA_TRACKING)}"
+        f"Clientes rastreados: {len(CLIENT_DATA_TRACKING)}, "
+        f"Nomes: {len(NAME_TRANSACTION_COUNT)}, "
+        f"CPFs: {len(CPF_TRANSACTION_COUNT)}, "
+        f"Telefones: {len(PHONE_TRANSACTION_COUNT)}"
     )
