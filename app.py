@@ -10,6 +10,46 @@ import subprocess
 import logging
 import urllib.parse
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, abort
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import redis
+from datetime import datetime, timedelta
+
+# Initialize rate limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Initialize Redis-like storage for banned IPs (using dict for simplicity)
+BANNED_IPS = {}
+BAN_THRESHOLD = 10  # Number of failed attempts before ban
+BAN_DURATION = timedelta(hours=24)  # Ban duration
+
+def is_ip_banned(ip):
+    if ip in BANNED_IPS:
+        ban_time, _ = BANNED_IPS[ip]
+        if datetime.now() < ban_time + BAN_DURATION:
+            return True
+        else:
+            del BANNED_IPS[ip]
+    return False
+
+def increment_ip_attempts(ip):
+    current_time = datetime.now()
+    if ip in BANNED_IPS:
+        ban_time, attempts = BANNED_IPS[ip]
+        if current_time > ban_time + BAN_DURATION:
+            BANNED_IPS[ip] = (current_time, 1)
+        else:
+            BANNED_IPS[ip] = (ban_time, attempts + 1)
+    else:
+        BANNED_IPS[ip] = (current_time, 1)
+    return BANNED_IPS[ip][1]
+
 import secrets
 import qrcode
 import qrcode.constants
@@ -1697,7 +1737,28 @@ def comprar_livro():
     return render_template('pagamento.html', is_book_payment=True)
 
 @app.route('/pagamento', methods=['GET', 'POST'])
+@limiter.limit("3 per minute")  # Strict rate limit for payment endpoint
 def pagamento_encceja():
+    ip = request.remote_addr
+    
+    # Check if IP is banned
+    if is_ip_banned(ip):
+        app.logger.warning(f"Blocked request from banned IP: {ip}")
+        abort(403, description="Your IP has been banned due to suspicious activity")
+        
+    # Basic bot detection
+    user_agent = request.headers.get('User-Agent', '').lower()
+    if not user_agent or 'bot' in user_agent or 'curl' in user_agent or 'wget' in user_agent:
+        attempts = increment_ip_attempts(ip)
+        if attempts >= BAN_THRESHOLD:
+            app.logger.warning(f"IP banned due to suspicious activity: {ip}")
+        abort(403, description="Bot activity detected")
+        
+    # Additional security headers
+    response = make_response()
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
     """Página de pagamento da taxa do Encceja"""
     if request.method == 'POST':
         # Obter dados do usuário
