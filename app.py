@@ -16,7 +16,9 @@ from flask_limiter.util import get_remote_address
 import redis
 from datetime import datetime, timedelta
 
-# Initialize rate limiter
+app = Flask(__name__)
+
+# Initialize rate limiter after creating app
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -60,8 +62,6 @@ import requests
 from payment_gateway import get_payment_gateway
 from for4payments import create_payment_api
 from pagamentocomdesconto import create_payment_with_discount_api
-
-app = Flask(__name__)
 
 # Domínio autorizado - Permitindo todos os domínios
 AUTHORIZED_DOMAIN = "*"
