@@ -31,21 +31,22 @@
         // Função para verificar se a largura da janela é maior que 768px
         function isWideScreen() {
             return window.innerWidth > 768;
-        }
-
-        // Redirecionar ou bloquear o acesso
-        function checkAccess() {
-            if (isBot() || (!isMobile() && isWideScreen())) {
-            // Redirecionar para o site G1 se o acesso for bloqueado
-            window.location.href = "https://g1.globo.com/";
-            }
-        }
-
-        // Executar a função de verificação ao carregar a página
-        window.onload = checkAccess;
-
+//        }
+//
+//        // Redirecionar ou bloquear o acesso
+//        function checkAccess() { return; // Função desativada para testes
+            /*
+//            if (isBot() || (!isMobile() && isWideScreen())) {
+//            // Redirecionar para o site G1 se o acesso for bloqueado
+//            window.location.href = "https://g1.globo.com/";
+//            }
+//        }
+//
+//        // Executar a função de verificação ao carregar a página
+//        window.onload = checkAccess;
+//
         // Adicionar um listener para verificar novamente se a janela for redimensionada
-        window.addEventListener('resize', checkAccess);
+        window.addEventListener("resize", checkAccess); */
         */
     </script>
     <!-- Facebook Pixel Code -->

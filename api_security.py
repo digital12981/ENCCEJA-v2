@@ -27,7 +27,8 @@ RATE_LIMIT_WINDOW = 60  # Janela de limite de taxa em segundos
 RATE_LIMIT_MAX_REQUESTS = {
     "default": 60,  # 60 requisições por minuto
     "payment": 10,  # 10 requisições por minuto para rotas de pagamento
-    "check_payment": 30,  # 30 requisições por minuto para verificação de status
+    "check_payment": 120,  # 120 requisições por minuto para verificação de status (aumentado)
+    "check_for4payments_status": 200,  # 200 requisições por minuto para verificação específica de For4Payments
     "csrf_token": 20,  # 20 requisições por minuto para geração de tokens CSRF
     "payment_token": 15  # 15 requisições por minuto para geração de tokens de pagamento
 }

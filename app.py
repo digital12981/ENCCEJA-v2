@@ -1362,7 +1362,7 @@ def verificar_pagamento():
         return jsonify({'error': f'Erro ao verificar status: {str(e)}', 'status': 'error'}), 500
 
 @app.route('/check-for4payments-status', methods=['GET', 'POST'])
-@secure_api('check_payment_status')
+@secure_api('check_for4payments_status')  # Usar o limite específico mais alto para verificação de For4Payments
 def check_for4payments_status():
     try:
         transaction_id = request.args.get('transaction_id')
