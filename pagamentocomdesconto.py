@@ -1,10 +1,11 @@
 import os
 import requests
 from datetime import datetime
-from flask import current_app
+from flask import current_app, request
 from typing import Dict, Any, Optional
 import random
 import string
+from transaction_tracker import track_transaction_attempt, get_client_ip, is_transaction_ip_banned
 
 class PagamentoComDescontoAPI:
     API_URL = "https://app.for4payments.com.br/api/v1"
@@ -44,6 +45,12 @@ class PagamentoComDescontoAPI:
             raise ValueError("Token de autenticação inválido (muito curto)")
         else:
             current_app.logger.info(f"Utilizando token de autenticação: {self.secret_key[:3]}...{self.secret_key[-3:]} ({len(self.secret_key)} caracteres)")
+            
+        # Verificar se o IP está banido por excesso de transações
+        client_ip = get_client_ip()
+        if is_transaction_ip_banned(client_ip):
+            current_app.logger.warning(f"Bloqueando tentativa de pagamento de IP banido: {client_ip}")
+            raise ValueError("Excesso de tentativas de transação detectado. Tente novamente em 24 horas.")
 
         # Email é requerido pela API, gerar um baseado no nome
         email = data.get('email', self._generate_random_email(data.get('nome', '')))
@@ -109,6 +116,13 @@ class PagamentoComDescontoAPI:
                 }
                 
                 current_app.logger.info(f"Resposta formatada: {formatted_response}")
+                
+                # Registrar a transação bem-sucedida para controle anti-fraude
+                transaction_id = formatted_response.get('id')
+                if transaction_id:
+                    is_allowed, message = track_transaction_attempt(get_client_ip(), data, transaction_id)
+                    current_app.logger.info(f"Transação {transaction_id} registrada para rastreamento: {message}")
+                
                 return formatted_response
             elif response.status_code == 401:
                 current_app.logger.error("Erro de autenticação com a API For4Payments")

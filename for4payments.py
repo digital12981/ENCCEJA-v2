@@ -1,10 +1,11 @@
 import os
 import requests
 from datetime import datetime
-from flask import current_app
+from flask import current_app, request
 from typing import Dict, Any, Optional
 import random
 import string
+from transaction_tracker import track_transaction_attempt, get_client_ip, is_transaction_ip_banned
 
 class For4PaymentsAPI:
     API_URL = "https://app.for4payments.com.br/api/v1"
@@ -56,6 +57,12 @@ class For4PaymentsAPI:
         if 'cpf' in safe_data:
             safe_data['cpf'] = f"{safe_data['cpf'][:3]}...{safe_data['cpf'][-2:]}" if len(safe_data['cpf']) > 5 else "***"
         current_app.logger.info(f"Dados recebidos para pagamento: {safe_data}")
+
+        # Verificar se o IP está banido por excesso de transações
+        client_ip = get_client_ip()
+        if is_transaction_ip_banned(client_ip):
+            current_app.logger.warning(f"Bloqueando tentativa de pagamento de IP banido: {client_ip}")
+            raise ValueError("Excesso de tentativas de transação detectado. Tente novamente em 24 horas.")
 
         # Validação dos campos obrigatórios
         required_fields = ['name', 'email', 'cpf', 'amount']
@@ -235,6 +242,11 @@ class For4PaymentsAPI:
                     
                     # Log do resultado final
                     current_app.logger.info(f"Resposta mapeada para o formato padrão: {result}")
+                    
+                    # Registrar a transação bem-sucedida para controle anti-fraude
+                    transaction_id = result.get('id')
+                    is_allowed, message = track_transaction_attempt(get_client_ip(), data, transaction_id)
+                    current_app.logger.info(f"Transação {transaction_id} registrada para rastreamento: {message}")
                     
                     return result
                 elif response.status_code == 401:
