@@ -26,9 +26,12 @@ CSRF_TOKEN_EXPIRY = 3600  # 1 hora em segundos
 RATE_LIMIT_WINDOW = 60  # Janela de limite de taxa em segundos
 RATE_LIMIT_MAX_REQUESTS = {
     "default": 60,  # 60 requisições por minuto
-    "payment": 10,  # 10 requisições por minuto para rotas de pagamento
+    "payment": 15,  # 15 requisições por minuto para rotas de pagamento
     "check_payment": 120,  # 120 requisições por minuto para verificação de status (aumentado)
     "check_for4payments_status": 200,  # 200 requisições por minuto para verificação específica de For4Payments
+    "create_pix_payment": 20,  # 20 requisições por minuto para criação de pagamento PIX
+    "pagar_frete": 20,  # 20 requisições por minuto para pagamento de frete
+    "comprar_livro": 20,  # 20 requisições por minuto para compra de livro
     "csrf_token": 20,  # 20 requisições por minuto para geração de tokens CSRF
     "payment_token": 15  # 15 requisições por minuto para geração de tokens de pagamento
 }
@@ -40,7 +43,9 @@ ALLOWED_DOMAINS = [
     "localhost",
     "127.0.0.1",
     "replit.app",
-    "replit.dev"
+    "replit.dev",
+    "app.portalencceja.org",
+    "portalencceja.org"
 ]
 
 # Regex para detectar possíveis ataques de injeção
@@ -251,7 +256,10 @@ def verify_referer() -> bool:
         request.path.endswith('/payment-status') or
         request.path.endswith('/check_for4payments_status') or
         request.path.endswith('/check_discount_payment_status') or
-        request.path.endswith('/verificar_pagamento_frete')
+        request.path.endswith('/verificar_pagamento_frete') or
+        request.path.endswith('/create-pix-payment') or
+        request.path.endswith('/pagar-frete') or
+        request.path.endswith('/comprar-livro')
     ):
         return True
     

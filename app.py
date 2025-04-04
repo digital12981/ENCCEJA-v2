@@ -1646,6 +1646,7 @@ def inscricao_sucesso():
     return render_template('inscricao_sucesso.html')
     
 @app.route('/pagar-frete', methods=['POST'])
+@secure_api('pagar_frete')
 def pagar_frete():
     """Cria uma transação PIX para pagamento do frete"""
     try:
@@ -1753,6 +1754,7 @@ def encceja_info():
     return render_template('encceja_info.html')
 
 @app.route('/comprar-livro', methods=['GET', 'POST'])
+@secure_api('comprar_livro')
 def comprar_livro():
     """Página para iniciar o pagamento do livro de R$ 143,10"""
     if request.method == 'POST':
