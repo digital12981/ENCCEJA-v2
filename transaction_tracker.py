@@ -34,6 +34,13 @@ IP_BAN_DURATION = timedelta(hours=24)
 # Estrutura: {"IP": ban_until_timestamp}
 BANNED_IPS = {}
 
+# Lista de nomes específicos que são automaticamente bloqueados
+# Inclui conteúdo ofensivo, discriminatório ou spam
+BLOCKED_NAMES = [
+    "SUA MAE EH NOSSA",
+    # Outros nomes bloqueados podem ser adicionados aqui
+]
+
 def get_client_ip() -> str:
     """Get client IP address from request"""
     if not request:
@@ -140,6 +147,11 @@ def track_transaction_attempt(ip: str, data: Dict[str, Any], transaction_id: Opt
     if 'name' in data and data['name']:
         name = str(data['name']).lower().strip()
         if name:
+            # Verificar se o nome está na lista de bloqueio
+            if name.upper() in [n.upper() for n in BLOCKED_NAMES]:
+                current_app.logger.warning(f"Nome '{name}' bloqueado por estar na lista de nomes proibidos")
+                return False, f"Este nome não é permitido no sistema. Entre em contato com o suporte se acredita que isso é um erro."
+                
             # Verificar ou inicializar contagem para este nome
             if name not in NAME_TRANSACTION_COUNT:
                 NAME_TRANSACTION_COUNT[name] = {"count": 1, "last_attempt": now}

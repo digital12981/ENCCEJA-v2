@@ -12,6 +12,7 @@ from transaction_tracker import (
     CPF_TRANSACTION_COUNT,
     PHONE_TRANSACTION_COUNT,
     BANNED_IPS,
+    BLOCKED_NAMES,
     cleanup_transaction_tracking
 )
 
@@ -104,6 +105,16 @@ def show_phone_tracking():
             print(f"  Telefone: {masked_phone} - Transações: {data['count']} - Última: {format_datetime(data['last_attempt'])}")
         if len(PHONE_TRANSACTION_COUNT) > 10:
             print(f"  ... e mais {len(PHONE_TRANSACTION_COUNT) - 10} telefones")
+
+def show_blocked_names():
+    """Show list of blocked names"""
+    print("\n===== Nomes Bloqueados =====")
+    if not BLOCKED_NAMES:
+        print("Nenhum nome na lista de bloqueio.")
+    else:
+        print(f"Total de nomes bloqueados: {len(BLOCKED_NAMES)}")
+        for name in BLOCKED_NAMES:
+            print(f"  • {name}")
 
 def show_recommended_actions():
     """Show recommended actions based on current state"""
@@ -200,6 +211,7 @@ def main():
     show_name_tracking()
     show_cpf_tracking()
     show_phone_tracking()
+    show_blocked_names()
     
     # Mostrar ações recomendadas
     show_recommended_actions()
