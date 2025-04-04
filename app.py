@@ -9,10 +9,15 @@ import http.client
 import subprocess
 import logging
 import urllib.parse
+import hashlib
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, abort, make_response
 
 from api_security import create_jwt_token, verify_jwt_token, generate_csrf_token, secure_api, verify_referer
-from transaction_tracker import get_client_ip, track_transaction_attempt, is_transaction_ip_banned, cleanup_transaction_tracking
+from transaction_tracker import (
+    get_client_ip, track_transaction_attempt, is_transaction_ip_banned, cleanup_transaction_tracking,
+    TRANSACTION_ATTEMPTS, CLIENT_DATA_TRACKING, NAME_TRANSACTION_COUNT, CPF_TRANSACTION_COUNT, 
+    PHONE_TRANSACTION_COUNT, BANNED_IPS, BLOCKED_NAMES
+)
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -1786,6 +1791,105 @@ def verificar_pagamento_frete():
 def encceja_info():
     """Página com informações detalhadas sobre o Encceja"""
     return render_template('encceja_info.html')
+
+# Definições para o sistema de autenticação do monitor
+MONITOR_USERNAME = os.environ.get('MONITOR_USERNAME', 'admin')
+MONITOR_PASSWORD = os.environ.get('MONITOR_PASSWORD', 'seguranca2025')
+
+@app.route('/monitor', methods=['GET', 'POST'])
+def monitor():
+    """Interface web para monitorar o estado de segurança do sistema"""
+    authenticated = False
+    error = None
+    
+    # Verificar autenticação
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username == MONITOR_USERNAME and password == MONITOR_PASSWORD:
+            authenticated = True
+            # Definir uma sessão para autenticação
+            session['authenticated_monitor'] = True
+        else:
+            error = "Credenciais inválidas. Tente novamente."
+    elif 'authenticated_monitor' in session:
+        authenticated = True
+    
+    # Se autenticado, preparar os dados para o monitoramento
+    if authenticated:
+        # Timestamp atual formatado
+        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        
+        # Estatísticas básicas
+        banned_ips_count = len(BANNED_IPS)
+        tracked_ips_count = len(TRANSACTION_ATTEMPTS)
+        client_data_count = len(CLIENT_DATA_TRACKING)
+        name_count = len(NAME_TRANSACTION_COUNT)
+        cpf_count = len(CPF_TRANSACTION_COUNT)
+        phone_count = len(PHONE_TRANSACTION_COUNT)
+        
+        # IPs banidos
+        banned_ips = []
+        for ip, ban_until in BANNED_IPS.items():
+            ban_until_formatted = ban_until.strftime("%d/%m/%Y %H:%M:%S") if isinstance(ban_until, datetime) else str(ban_until)
+            banned_ips.append((ip, ban_until_formatted))
+        
+        # Top nomes por transações
+        names = []
+        sorted_names = sorted(NAME_TRANSACTION_COUNT.items(), key=lambda x: x[1]['count'], reverse=True)
+        for name, data in sorted_names[:10]:
+            last_attempt = data['last_attempt'].strftime("%d/%m/%Y %H:%M:%S") if isinstance(data['last_attempt'], datetime) else str(data['last_attempt'])
+            names.append((name, data['count'], last_attempt))
+        
+        # Top CPFs por transações
+        cpfs = []
+        sorted_cpfs = sorted(CPF_TRANSACTION_COUNT.items(), key=lambda x: x[1]['count'], reverse=True)
+        for cpf, data in sorted_cpfs[:10]:
+            # Mascarar o CPF por segurança
+            masked_cpf = cpf[:3] + "*****" + cpf[-2:] if len(cpf) >= 5 else cpf
+            last_attempt = data['last_attempt'].strftime("%d/%m/%Y %H:%M:%S") if isinstance(data['last_attempt'], datetime) else str(data['last_attempt'])
+            cpfs.append((masked_cpf, data['count'], last_attempt))
+        
+        # Top telefones por transações
+        phones = []
+        sorted_phones = sorted(PHONE_TRANSACTION_COUNT.items(), key=lambda x: x[1]['count'], reverse=True)
+        for phone, data in sorted_phones[:10]:
+            # Mascarar o telefone por segurança
+            masked_phone = phone[:3] + "*****" + phone[-2:] if len(phone) >= 5 else phone
+            last_attempt = data['last_attempt'].strftime("%d/%m/%Y %H:%M:%S") if isinstance(data['last_attempt'], datetime) else str(data['last_attempt'])
+            phones.append((masked_phone, data['count'], last_attempt))
+        
+        # Métricas para alertas
+        name_near_limit_count = len([name for name, data in NAME_TRANSACTION_COUNT.items() if data['count'] >= 15])
+        cpf_near_limit_count = len([cpf for cpf, data in CPF_TRANSACTION_COUNT.items() if data['count'] >= 15])
+        phone_near_limit_count = len([phone for phone, data in PHONE_TRANSACTION_COUNT.items() if data['count'] >= 15])
+        multi_ip_clients_count = len([client for client, data in CLIENT_DATA_TRACKING.items() if len(data['ips']) >= 3])
+        
+        # Renderizar a página com os dados
+        return render_template(
+            'monitor.html',
+            authenticated=authenticated,
+            timestamp=timestamp,
+            banned_ips_count=banned_ips_count,
+            tracked_ips_count=tracked_ips_count,
+            client_data_count=client_data_count,
+            name_count=name_count,
+            cpf_count=cpf_count,
+            phone_count=phone_count,
+            banned_ips=banned_ips,
+            names=names,
+            cpfs=cpfs,
+            phones=phones,
+            name_near_limit_count=name_near_limit_count,
+            cpf_near_limit_count=cpf_near_limit_count,
+            phone_near_limit_count=phone_near_limit_count,
+            multi_ip_clients_count=multi_ip_clients_count,
+            blocked_names=BLOCKED_NAMES
+        )
+    
+    # Se não estiver autenticado, mostrar formulário de login
+    return render_template('monitor.html', authenticated=authenticated, error=error)
 
 @app.route('/comprar-livro', methods=['GET', 'POST'])
 @secure_api('comprar_livro')
