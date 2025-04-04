@@ -105,19 +105,67 @@ def verify_jwt_token(token: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
 def get_client_fingerprint() -> str:
     """
     Cria uma impressão digital do cliente combinando diversos fatores
-    para identificar clientes únicos além do IP
+    para identificar clientes mesmo que usem diferentes IPs/proxies
     """
     # Obter os headers mais distintivos
     user_agent = request.headers.get('User-Agent', '')
     accept_lang = request.headers.get('Accept-Language', '')
+    accept_encoding = request.headers.get('Accept-Encoding', '')
     
-    # Usar X-Forwarded-For se disponível (para compatibilidade com proxies)
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if ip and ',' in ip:
-        ip = ip.split(',')[0].strip()  # Pegar o primeiro IP na cadeia
+    # Coletar todos os headers potencialmente relacionados a proxies
+    forwarded = request.headers.get('Forwarded', '')
+    x_forwarded_for = request.headers.get('X-Forwarded-For', '')
+    x_forwarded_proto = request.headers.get('X-Forwarded-Proto', '')
+    x_forwarded_host = request.headers.get('X-Forwarded-Host', '')
+    via = request.headers.get('Via', '')
     
-    # Criar uma string combinando os fatores
-    fingerprint_str = f"{ip}|{user_agent}|{accept_lang}"
+    # Obter o IP real do cliente considerando possíveis proxies
+    ip = request.remote_addr
+    possible_ips = []
+    
+    # Tentar extrair IPs de vários headers
+    if x_forwarded_for:
+        possible_ips.extend([ip.strip() for ip in x_forwarded_for.split(',')])
+        
+    if forwarded:
+        # Extrair IPs do header Forwarded (formato mais complexo)
+        for part in forwarded.split(';'):
+            if '=' in part and part.lower().startswith('for='):
+                ip_part = part.split('=')[1].strip().strip('"[]')
+                if ':' in ip_part:  # IPv6
+                    possible_ips.append(ip_part)
+                else:
+                    possible_ips.append(ip_part)
+    
+    # Coletar cookies ativos (outra forma de fingerprinting)
+    cookies_str = "|".join(sorted(request.cookies.keys())) if request.cookies else ""
+    
+    # Detectar características de cliente que persistem através de proxies
+    # Incluir o IP original e outros possíveis IPs encontrados
+    fingerprint_parts = [
+        # Headers básicos do navegador
+        f"ua:{user_agent[:100]}",  # Limitar tamanho para evitar DoS
+        f"lang:{accept_lang[:50]}",
+        f"enc:{accept_encoding[:50]}",
+        
+        # Informações de proxy/encaminhamento
+        f"via:{via[:50]}",
+        f"fwd_host:{x_forwarded_host[:50]}",
+        f"fwd_proto:{x_forwarded_proto[:20]}",
+        
+        # Cookies ativos (padrão de uso)
+        f"cookies:{cookies_str[:100]}",
+        
+        # Incluir o IP original
+        f"ip:{ip}"
+    ]
+    
+    # Adicionar outros IPs detectados
+    for idx, possible_ip in enumerate(possible_ips[:3]):  # Limitar a 3 IPs para evitar ataques
+        fingerprint_parts.append(f"alt_ip{idx}:{possible_ip}")
+    
+    # Criar uma string combinando os fatores e ordenada para consistência
+    fingerprint_str = "|".join(sorted(fingerprint_parts))
     
     # Gerar hash da string para criar o fingerprint
     return hashlib.sha256(fingerprint_str.encode()).hexdigest()
@@ -269,7 +317,7 @@ def secure_api(route_name: str = None):
                             current_app.logger.warning(f"Possível ataque de injeção detectado: {key}={value}")
                             return jsonify({'error': 'Requisição inválida'}), 400
             
-            # Para rotas POST, verificar token CSRF (exceto rotas de verificação de status de pagamento)
+            # Para rotas POST, verificar token CSRF (exceto rotas de verificação de status de pagamento e páginas específicas de geração de PIX)
             if request.method == 'POST' and not (request.path and (
                 request.path.endswith('/verificar-pagamento') or 
                 request.path.endswith('/verificar_pagamento') or 
@@ -277,7 +325,11 @@ def secure_api(route_name: str = None):
                 request.path.endswith('/payment-status') or 
                 request.path.endswith('/check_for4payments_status') or 
                 request.path.endswith('/check_discount_payment_status') or 
-                request.path.endswith('/verificar_pagamento_frete')
+                request.path.endswith('/verificar_pagamento_frete') or
+                # Adicionar exceção para a rota de criação de PIX na página de agradecimento
+                request.path.endswith('/create-pix-payment') or
+                request.path.endswith('/pagar-frete') or
+                request.path.endswith('/comprar-livro')
             )):
                 csrf_token = request.headers.get('X-CSRF-Token')
                 if not csrf_token or not verify_csrf_token(csrf_token):
