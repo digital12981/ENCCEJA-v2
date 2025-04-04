@@ -2078,13 +2078,23 @@ def consultar_cpf():
     if not cpf:
         return jsonify({"error": "CPF não fornecido"}), 400
     
+    # Limpar o CPF de qualquer caractere não numérico
+    cpf_limpo = re.sub(r'[^\d]', '', cpf)
+    app.logger.info(f"[PROD] Consultando CPF na API: {cpf_limpo}")
+    
     # URL da API especificada
-    api_url = f"https://webhook-manager.replit.app/api/v1/cliente?cpf={cpf}"
+    api_url = f"https://webhook-manager.replit.app/api/v1/cliente?cpf={cpf_limpo}"
     
     try:
         # Fazer a solicitação para a API
+        app.logger.info(f"[PROD] Enviando requisição para: {api_url}")
         response = requests.get(api_url)
+        
+        # Log da resposta recebida
+        app.logger.info(f"[PROD] Resposta da API (status code): {response.status_code}")
+        
         data = response.json()
+        app.logger.debug(f"[PROD] Dados recebidos da API: {data}")
         
         # Verificar se a consulta foi bem-sucedida
         if data.get('sucesso') and 'cliente' in data:
@@ -2093,20 +2103,36 @@ def consultar_cpf():
             # Remover qualquer formatação do CPF
             cpf_sem_pontuacao = re.sub(r'[^\d]', '', cliente.get('cpf', ''))
             nome_completo = cliente.get('nome', '')
-            telefone = cliente.get('telefone', '')
             
-            # Em vez de retornar JSON, redirecionar para a página de agradecimento
-            app.logger.info(f"[PROD] CPF consultado com sucesso: {cpf}. Redirecionando para página de agradecimento.")
+            # Obter o telefone
+            telefone_bruto = cliente.get('telefone', '')
+            app.logger.info(f"[PROD] Telefone recebido da API: {telefone_bruto}")
+            
+            # Processar o telefone adequadamente
+            telefone = telefone_bruto
+            # Se começar com +55, remover
+            if telefone.startswith('+55'):
+                telefone = telefone[3:]
+            # Se começar com 55 e for longo o suficiente, pode ser o código do país sem o +
+            elif telefone.startswith('55') and len(telefone) >= 12:
+                telefone = telefone[2:]
+            # Remover qualquer outro caractere não numérico
+            telefone = re.sub(r'[^\d]', '', telefone)
+            
+            app.logger.info(f"[PROD] Dados processados: CPF={cpf_sem_pontuacao}, Nome={nome_completo}, Telefone Original={telefone_bruto}, Telefone Processado={telefone}")
             
             # Construir URL de redirecionamento com os parâmetros necessários
             redirect_url = f"/obrigado?nome={urllib.parse.quote(nome_completo)}&cpf={cpf_sem_pontuacao}&phone={urllib.parse.quote(telefone)}"
+            app.logger.info(f"[PROD] Redirecionando para: {redirect_url}")
             return redirect(redirect_url)
         else:
+            erro = data.get('erro', 'CPF não encontrado ou inválido')
+            app.logger.warning(f"[PROD] Erro na consulta de CPF: {erro}")
             # Em caso de erro na API, ainda retornar JSON para que o front-end possa tratar
-            return jsonify({"error": "CPF não encontrado ou inválido"}), 404
+            return jsonify({"error": erro}), 404
     
     except Exception as e:
-        app.logger.error(f"Erro ao buscar CPF: {str(e)}")
+        app.logger.error(f"[PROD] Erro ao buscar CPF {cpf_limpo}: {str(e)}")
         return jsonify({"error": f"Erro ao buscar CPF: {str(e)}"}), 500
 
 @app.route('/consultar-cpf-inscricao')

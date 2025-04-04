@@ -36,8 +36,12 @@ class For4PaymentsAPI:
         return f"{clean_name}{random_num}@{domain}"
 
     def _generate_random_phone(self) -> str:
+        """
+        Gera um número de telefone brasileiro aleatório no formato DDDNNNNNNNNN
+        sem o prefixo +55. Usado apenas como fallback quando um telefone válido não está disponível.
+        """
         ddd = str(random.randint(11, 99))
-        number = ''.join(random.choices(string.digits, k=8))
+        number = ''.join(random.choices(string.digits, k=9))
         return f"{ddd}{number}"
 
     def create_pix_payment(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -112,13 +116,26 @@ class For4PaymentsAPI:
 
             # Processamento do telefone
             phone = data.get('phone', '')
-            if not phone or not isinstance(phone, str) or len(phone.strip()) < 10:
-                phone = self._generate_random_phone()
-                current_app.logger.info(f"Telefone gerado automaticamente: {phone}")
-            else:
-                # Remove any non-digit characters from the phone
+            
+            # Verifica se o telefone foi fornecido e processa
+            if phone and isinstance(phone, str) and len(phone.strip()) > 0:
+                # Remove caracteres não numéricos
                 phone = ''.join(filter(str.isdigit, phone))
-                current_app.logger.info(f"Telefone processado: {phone}")
+                
+                # Verifica se o número tem um formato aceitável após a limpeza
+                if len(phone) >= 10:
+                    # Se existir o prefixo brasileiro 55, garante que ele seja removido para o padrão da API
+                    if phone.startswith('55') and len(phone) > 10:
+                        phone = phone[2:]
+                    current_app.logger.info(f"Telefone do usuário processado: {phone}")
+                else:
+                    current_app.logger.warning(f"Telefone fornecido inválido (muito curto): {phone}")
+                    phone = self._generate_random_phone()
+                    current_app.logger.info(f"Telefone gerado automaticamente como fallback: {phone}")
+            else:
+                # Se não houver telefone ou for inválido, gerar um aleatório
+                phone = self._generate_random_phone()
+                current_app.logger.info(f"Telefone não fornecido, gerado automaticamente: {phone}")
 
             # Preparação dos dados para a API
             payment_data = {

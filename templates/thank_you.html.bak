@@ -997,4 +997,12 @@
         });
     </script>
 </body>
-</html>
+</html>        // Formatar telefone: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+            } else if (phone.length === 8) {
+                // Apenas telefone fixo sem DDD (8 dígitos): XXXX-XXXX
+                return phone.replace(/(\d{4})(\d{4})/, '$1-$2');
+            } else {
+                // Se não se encaixar em nenhum formato padrão, retorna como está
+                return phone;
+            }
+        }
