@@ -12,3 +12,4 @@ qrcode[pil]
 python-dotenv
 Flask-Limiter
 Flask-Limiter
+redis
