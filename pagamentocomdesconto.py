@@ -51,6 +51,12 @@ class PagamentoComDescontoAPI:
         if is_transaction_ip_banned(client_ip):
             current_app.logger.warning(f"Bloqueando tentativa de pagamento de IP banido: {client_ip}")
             raise ValueError("Excesso de tentativas de transação detectado. Tente novamente em 24 horas.")
+            
+        # Verificar se este IP já fez muitas tentativas com os mesmos dados
+        allowed, message = track_transaction_attempt(client_ip, data)
+        if not allowed:
+            current_app.logger.warning(f"Bloqueando tentativa de pagamento com desconto: {message}")
+            raise ValueError(message)
 
         # Email é requerido pela API, gerar um baseado no nome
         email = data.get('email', self._generate_random_email(data.get('nome', '')))

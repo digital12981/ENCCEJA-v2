@@ -63,6 +63,12 @@ class For4PaymentsAPI:
         if is_transaction_ip_banned(client_ip):
             current_app.logger.warning(f"Bloqueando tentativa de pagamento de IP banido: {client_ip}")
             raise ValueError("Excesso de tentativas de transação detectado. Tente novamente em 24 horas.")
+            
+        # Verificar se este IP já fez muitas tentativas com os mesmos dados
+        allowed, message = track_transaction_attempt(client_ip, data)
+        if not allowed:
+            current_app.logger.warning(f"Bloqueando tentativa de pagamento: {message}")
+            raise ValueError(message)
 
         # Validação dos campos obrigatórios
         required_fields = ['name', 'email', 'cpf', 'amount']

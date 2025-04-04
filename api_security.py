@@ -1,143 +1,105 @@
 import os
 import time
-import json
+import jwt
+import uuid
 import hashlib
-import hmac
-import base64
-import secrets
-import random
-import re
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import request, jsonify, abort, current_app, session
-from typing import Dict, Any, List, Callable, Optional, Tuple, Union
+from typing import Dict, Any, Optional, Tuple, List, Set
 from urllib.parse import urlparse
+import re
 
-# Sistema de tokens para autorização de API
-JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
-TOKEN_EXPIRY_MINUTES = 10  # Token válido por 10 minutos
+from flask import request, g, current_app, jsonify, abort
 
-# Configuração do rate limiter
-API_RATE_LIMITS = {
-    "create_pix_payment": {"count": 3, "per_minutes": 5},     # 3 solicitações por 5 minutos
-    "check_payment_status": {"count": 20, "per_minutes": 5},  # 20 verificações por 5 minutos
-    "verify_cpf": {"count": 3, "per_minutes": 5},             # 3 verificações de CPF por 5 minutos
-    "default": {"count": 20, "per_minutes": 15}               # Limite padrão
+# Lista de tokens CSRF válidos com tempo de expiração
+# Formato: {token: expiration_timestamp}
+CSRF_TOKENS = {}
+
+# Limites de taxa por rota e por IP
+# Formato: {ip: {route: {count: int, last_request: timestamp}}}
+RATE_LIMITS = {}
+
+# Configurações de segurança
+JWT_SECRET = os.environ.get("JWT_SECRET", "secure_random_key_should_be_replaced")  # Deve ser alterado em produção
+CSRF_TOKEN_EXPIRY = 3600  # 1 hora em segundos
+RATE_LIMIT_WINDOW = 60  # Janela de limite de taxa em segundos
+RATE_LIMIT_MAX_REQUESTS = {
+    "default": 60,  # 60 requisições por minuto
+    "payment": 10,  # 10 requisições por minuto para rotas de pagamento
+    "check_payment": 30,  # 30 requisições por minuto para verificação de status
+    "csrf_token": 20,  # 20 requisições por minuto para geração de tokens CSRF
+    "payment_token": 15  # 15 requisições por minuto para geração de tokens de pagamento
 }
 
-# Armazenamento de rate limiting
-# Estrutura: {"ip+rota": {"count": N, "reset_at": timestamp}}
-RATE_LIMIT_STORE = {}
-
-# Armazenamento de nonces para prevenção de replays
-# Estrutura: {"nonce": expiry_timestamp}
-NONCE_STORE = {}
-
-# Domínios permitidos para referer
-ALLOWED_REFERERS = [
+# Lista de domínios permitidos no header 'Referer'
+ALLOWED_DOMAINS = [
     "encceja2025.com.br",
     "www.encceja2025.com.br",
     "localhost",
-    "127.0.0.1"
+    "127.0.0.1",
+    "replit.app",
+    "replit.dev"
 ]
 
-# Tokens anti-CSRF
-CSRF_TOKENS = {}
+# Regex para detectar possíveis ataques de injeção
+INJECTION_PATTERNS = [
+    r"<script.*?>.*?</script>",
+    r"javascript:",
+    r"onload=",
+    r"onerror=",
+    r"onclick=",
+    r"alert\(",
+    r"eval\(",
+    r"document\.cookie",
+    r"\/etc\/passwd",
+    r"\/bin\/bash",
+    r"SELECT.*FROM",
+    r"INSERT.*INTO",
+    r"DELETE.*FROM",
+    r"DROP.*TABLE",
+    r"1=1",
+    r"OR 1=1"
+]
 
 def generate_csrf_token() -> str:
     """Gera um token anti-CSRF único"""
-    token = secrets.token_hex(16)
-    CSRF_TOKENS[token] = datetime.now() + timedelta(hours=2)  # Válido por 2 horas
+    token = str(uuid.uuid4())
+    expiry = time.time() + CSRF_TOKEN_EXPIRY
+    CSRF_TOKENS[token] = expiry
     return token
 
 def clean_expired_csrf_tokens() -> None:
     """Remove tokens CSRF expirados"""
-    now = datetime.now()
-    expired = [token for token, expiry in CSRF_TOKENS.items() if now > expiry]
-    for token in expired:
+    now = time.time()
+    expired_tokens = [token for token, expiry in CSRF_TOKENS.items() if expiry < now]
+    for token in expired_tokens:
         CSRF_TOKENS.pop(token, None)
 
 def create_jwt_token(data: Dict[str, Any]) -> str:
     """
     Cria um token JWT para autenticação interna
     """
-    now = int(time.time())
-    expiry = now + (TOKEN_EXPIRY_MINUTES * 60)
-    
-    # Adicionar timestamps e nonce ao payload
     payload = {
-        **data,
-        "iat": now,
-        "exp": expiry,
-        "nonce": secrets.token_hex(8)
+        'data': data,
+        'exp': datetime.utcnow() + timedelta(minutes=30),  # Token expira em 30 minutos
+        'iat': datetime.utcnow(),
+        'jti': str(uuid.uuid4())  # ID único para este token
     }
-    
-    # Codificar o payload em base64
-    payload_json = json.dumps(payload)
-    payload_b64 = base64.b64encode(payload_json.encode()).decode()
-    
-    # Criar assinatura
-    signature = hmac.new(
-        JWT_SECRET.encode(),
-        payload_b64.encode(),
-        hashlib.sha256
-    ).digest()
-    signature_b64 = base64.b64encode(signature).decode()
-    
-    # Combinar em um token JWT
-    return f"{payload_b64}.{signature_b64}"
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 def verify_jwt_token(token: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
     """
     Verifica um token JWT e retorna o payload se válido
     """
     try:
-        # Separar payload e assinatura
-        if '.' not in token:
-            return False, None
-            
-        payload_b64, signature_b64 = token.split('.')
-        
-        # Verificar assinatura
-        expected_signature = hmac.new(
-            JWT_SECRET.encode(),
-            payload_b64.encode(),
-            hashlib.sha256
-        ).digest()
-        expected_signature_b64 = base64.b64encode(expected_signature).decode()
-        
-        if signature_b64 != expected_signature_b64:
-            current_app.logger.warning("Assinatura JWT inválida")
-            return False, None
-            
-        # Decodificar payload
-        payload_json = base64.b64decode(payload_b64).decode()
-        payload = json.loads(payload_json)
-        
-        # Verificar expiração
-        now = int(time.time())
-        if payload.get('exp', 0) < now:
-            current_app.logger.warning("Token JWT expirado")
-            return False, None
-            
-        # Verificar nonce para prevenir replay attacks
-        nonce = payload.get('nonce')
-        if nonce in NONCE_STORE:
-            current_app.logger.warning(f"Nonce {nonce} já utilizado - possível ataque de replay")
-            return False, None
-            
-        # Registrar nonce usado
-        NONCE_STORE[nonce] = now + (TOKEN_EXPIRY_MINUTES * 60)
-        
-        # Limpar nonces expirados
-        expired_nonces = [n for n, exp in NONCE_STORE.items() if exp < now]
-        for n in expired_nonces:
-            NONCE_STORE.pop(n, None)
-            
-        return True, payload
-        
-    except Exception as e:
-        current_app.logger.error(f"Erro ao verificar token JWT: {str(e)}")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        return True, payload.get('data', {})
+    except jwt.ExpiredSignatureError:
+        current_app.logger.warning("Token JWT expirado")
+        return False, None
+    except jwt.InvalidTokenError as e:
+        current_app.logger.warning(f"Token JWT inválido: {str(e)}")
         return False, None
 
 def get_client_fingerprint() -> str:
@@ -145,20 +107,20 @@ def get_client_fingerprint() -> str:
     Cria uma impressão digital do cliente combinando diversos fatores
     para identificar clientes únicos além do IP
     """
+    # Obter os headers mais distintivos
     user_agent = request.headers.get('User-Agent', '')
     accept_lang = request.headers.get('Accept-Language', '')
-    remote_addr = request.remote_addr or '0.0.0.0'
     
-    # Extrair informações do user agent
-    browser_info = re.findall(r'(?:Chrome|Firefox|Safari|Edge|MSIE)\/[\d\.]+', user_agent)
-    browser_string = "".join(browser_info) if browser_info else "unknown"
+    # Usar X-Forwarded-For se disponível (para compatibilidade com proxies)
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip and ',' in ip:
+        ip = ip.split(',')[0].strip()  # Pegar o primeiro IP na cadeia
     
-    # Extrair prefixo do IP (3 primeiros octetos para IPv4)
-    ip_prefix = ".".join(remote_addr.split('.')[:3]) if '.' in remote_addr else remote_addr
+    # Criar uma string combinando os fatores
+    fingerprint_str = f"{ip}|{user_agent}|{accept_lang}"
     
-    # Criar hash da combinação destes fatores
-    fingerprint_data = f"{ip_prefix}|{browser_string}|{accept_lang[:5]}"
-    return hashlib.md5(fingerprint_data.encode()).hexdigest()
+    # Gerar hash da string para criar o fingerprint
+    return hashlib.sha256(fingerprint_str.encode()).hexdigest()
 
 def check_rate_limit(route_name: str) -> Tuple[bool, Dict[str, Any]]:
     """
@@ -166,101 +128,111 @@ def check_rate_limit(route_name: str) -> Tuple[bool, Dict[str, Any]]:
     
     Retorna: (is_allowed, rate_limit_info)
     """
-    # Identificar o cliente
-    client_ip = request.remote_addr or '0.0.0.0'
-    client_fingerprint = get_client_fingerprint()
+    # Obter cliente por IP + fingerprint para maior precisão
+    ip = request.remote_addr or "unknown"
+    fingerprint = get_client_fingerprint()
+    client_id = f"{ip}:{fingerprint[:8]}"
     
-    # Chave única para este cliente e rota
-    key = f"{client_fingerprint}:{route_name}"
+    # Inicializar a estrutura de dados se necessário
+    if client_id not in RATE_LIMITS:
+        RATE_LIMITS[client_id] = {}
     
-    # Obter limites para esta rota
-    route_limits = API_RATE_LIMITS.get(route_name, API_RATE_LIMITS["default"])
-    max_requests = route_limits["count"]
-    per_minutes = route_limits["per_minutes"]
+    now = time.time()
     
-    # Tempo atual
-    now = datetime.now()
+    # Limpar dados antigos primeiro
+    for r in list(RATE_LIMITS[client_id].keys()):
+        if now - RATE_LIMITS[client_id][r]['last_request'] > RATE_LIMIT_WINDOW:
+            del RATE_LIMITS[client_id][r]
     
-    # Se o cliente não está no registro, inicializar
-    if key not in RATE_LIMIT_STORE:
-        RATE_LIMIT_STORE[key] = {
-            "count": 1,
-            "reset_at": now + timedelta(minutes=per_minutes)
-        }
+    # Obter o limite para esta rota específica ou usar o padrão
+    if route_name in RATE_LIMIT_MAX_REQUESTS:
+        max_requests = RATE_LIMIT_MAX_REQUESTS[route_name]
+    else:
+        max_requests = RATE_LIMIT_MAX_REQUESTS['default']
+    
+    # Verificar a contagem atual
+    if route_name in RATE_LIMITS[client_id]:
+        route_info = RATE_LIMITS[client_id][route_name]
+        
+        # Se a última requisição foi há mais de X segundos, resetar o contador
+        if now - route_info['last_request'] > RATE_LIMIT_WINDOW:
+            RATE_LIMITS[client_id][route_name] = {'count': 1, 'last_request': now}
+            return True, {
+                'limit': max_requests, 
+                'remaining': max_requests - 1, 
+                'reset': int(now + RATE_LIMIT_WINDOW)
+            }
+        
+        # Verificar se o limite foi atingido
+        if route_info['count'] >= max_requests:
+            reset_time = route_info['last_request'] + RATE_LIMIT_WINDOW
+            return False, {
+                'limit': max_requests, 
+                'remaining': 0, 
+                'reset': int(reset_time)
+            }
+        
+        # Incrementar contador
+        route_info['count'] += 1
+        route_info['last_request'] = now
         return True, {
-            "limit": max_requests,
-            "remaining": max_requests - 1,
-            "reset": int((now + timedelta(minutes=per_minutes)).timestamp())
+            'limit': max_requests, 
+            'remaining': max_requests - route_info['count'], 
+            'reset': int(now + RATE_LIMIT_WINDOW)
         }
-    
-    # Verificar se o período foi resetado
-    client_data = RATE_LIMIT_STORE[key]
-    if now > client_data["reset_at"]:
-        # Reiniciar contagem
-        RATE_LIMIT_STORE[key] = {
-            "count": 1,
-            "reset_at": now + timedelta(minutes=per_minutes)
-        }
+    else:
+        # Primeira requisição para esta rota
+        RATE_LIMITS[client_id][route_name] = {'count': 1, 'last_request': now}
         return True, {
-            "limit": max_requests,
-            "remaining": max_requests - 1,
-            "reset": int((now + timedelta(minutes=per_minutes)).timestamp())
+            'limit': max_requests, 
+            'remaining': max_requests - 1, 
+            'reset': int(now + RATE_LIMIT_WINDOW)
         }
-    
-    # Verificar se atingiu o limite
-    if client_data["count"] >= max_requests:
-        current_app.logger.warning(
-            f"Taxa limite excedida para {client_ip} ({client_fingerprint}) na rota {route_name}"
-        )
-        return False, {
-            "limit": max_requests,
-            "remaining": 0,
-            "reset": int(client_data["reset_at"].timestamp())
-        }
-    
-    # Incrementar contador
-    client_data["count"] += 1
-    
-    return True, {
-        "limit": max_requests,
-        "remaining": max_requests - client_data["count"],
-        "reset": int(client_data["reset_at"].timestamp())
-    }
 
 def verify_referer() -> bool:
     """
     Verifica se o referer é permitido
     """
-    referer = request.headers.get('Referer', '')
+    # Rotas de verificação de pagamento não precisam de verificação de referer
+    # para compatibilidade com webhooks e atualizações de status no frontend
+    if request.path and (
+        request.path.endswith('/verificar-pagamento') or
+        request.path.endswith('/verificar_pagamento') or
+        request.path.endswith('/check-payment-status') or
+        request.path.endswith('/payment-status') or
+        request.path.endswith('/check_for4payments_status') or
+        request.path.endswith('/check_discount_payment_status') or
+        request.path.endswith('/verificar_pagamento_frete')
+    ):
+        return True
+    
+    referer = request.headers.get('Referer')
     if not referer:
         return False
     
-    # Extrair domínio do referer
+    # Extrair o domínio do referer
     try:
-        parsed_uri = urlparse(referer)
-        referer_domain = parsed_uri.netloc.lower()
-        
-        # Remover porta do domínio, se houver
+        referer_domain = urlparse(referer).netloc
+        # Remover a porta se presente
         if ':' in referer_domain:
             referer_domain = referer_domain.split(':')[0]
             
-        # Verificar se o domínio está na lista de permitidos
-        for allowed in ALLOWED_REFERERS:
-            if referer_domain == allowed or referer_domain.endswith('.' + allowed):
-                return True
-                
-        current_app.logger.warning(f"Referer não permitido: {referer_domain}")
-        return False
+        return any(referer_domain.endswith(domain) for domain in ALLOWED_DOMAINS)
     except Exception as e:
-        current_app.logger.error(f"Erro ao verificar referer: {str(e)}")
+        current_app.logger.error(f"Erro ao analisar referer: {str(e)}")
         return False
 
 def verify_csrf_token(token: str) -> bool:
     """
     Verifica se um token CSRF é válido
     """
-    clean_expired_csrf_tokens()
-    return token in CSRF_TOKENS
+    if token in CSRF_TOKENS:
+        if time.time() < CSRF_TOKENS[token]:
+            return True
+        else:
+            # Token expirado
+            CSRF_TOKENS.pop(token, None)
+    return False
 
 def secure_api(route_name: str = None):
     """
@@ -269,74 +241,53 @@ def secure_api(route_name: str = None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Determinar o nome da rota
-            route = route_name or f.__name__
-            
-            # 1. Verificar referer
-            if not verify_referer():
-                current_app.logger.warning(f"Acesso bloqueado à rota {route}: referer inválido")
-                abort(403, description="Forbidden: invalid referer")
-            
-            # 2. Verificar token CSRF para requisições não-GET
-            if request.method != 'GET':
-                csrf_token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token')
-                if not csrf_token or not verify_csrf_token(csrf_token):
-                    current_app.logger.warning(f"Acesso bloqueado à rota {route}: token CSRF inválido")
-                    abort(403, description="Forbidden: invalid CSRF token")
-            
-            # 3. Verificar rate limiting
-            allowed, rate_info = check_rate_limit(route)
+            # Verificação 1: Limites de taxa
+            rate_limit_name = route_name or request.endpoint or 'default'
+            allowed, rate_info = check_rate_limit(rate_limit_name)
             if not allowed:
+                current_app.logger.warning(f"Taxa limite excedida para {rate_limit_name}")
                 response = jsonify({
-                    "error": "Taxa limite excedida. Tente novamente mais tarde.",
-                    "rate_limit": rate_info
+                    'error': 'Muitas requisições. Tente novamente em alguns segundos.',
+                    'rate_limit': rate_info
                 })
                 response.status_code = 429
-                response.headers['X-RateLimit-Limit'] = str(rate_info['limit'])
-                response.headers['X-RateLimit-Remaining'] = str(rate_info['remaining'])
-                response.headers['X-RateLimit-Reset'] = str(rate_info['reset'])
                 return response
             
-            # 4. Para rotas de criação de pagamento, verificar token JWT
-            if route in ['create_pix_payment', 'create_discount_payment']:
-                auth_token = request.headers.get('X-Auth-Token')
-                if not auth_token:
-                    current_app.logger.warning(f"Acesso bloqueado à rota {route}: sem token de autenticação")
-                    abort(401, description="Unauthorized: authentication token required")
-                
-                valid, payload = verify_jwt_token(auth_token)
-                if not valid:
-                    current_app.logger.warning(f"Acesso bloqueado à rota {route}: token inválido")
-                    abort(401, description="Unauthorized: invalid authentication token")
+            # Adicionar headers com informações de limite de taxa
+            g.rate_limit_info = rate_info
             
-            # Adicionar headers de rate limit à resposta
-            response = f(*args, **kwargs)
-            if isinstance(response, tuple):
-                response_obj, status_code = response
-                headers = {}
-            else:
-                response_obj = response
-                status_code = 200
-                headers = {}
+            # Verificação 2: Origem do Referer
+            if not verify_referer():
+                current_app.logger.warning(f"Referer inválido: {request.headers.get('Referer')}")
+                return jsonify({'error': 'Acesso não autorizado'}), 403
             
-            # Converter para um objeto de resposta se for um dicionário
-            if isinstance(response_obj, dict):
-                response_obj = jsonify(response_obj)
+            # Verificação 3: Detectar possíveis ataques de injeção nos parâmetros
+            for key, value in request.values.items():
+                if isinstance(value, str):
+                    for pattern in INJECTION_PATTERNS:
+                        if re.search(pattern, value, re.IGNORECASE):
+                            current_app.logger.warning(f"Possível ataque de injeção detectado: {key}={value}")
+                            return jsonify({'error': 'Requisição inválida'}), 400
             
-            # Adicionar headers de rate limit
-            response_obj.headers['X-RateLimit-Limit'] = str(rate_info['limit'])
-            response_obj.headers['X-RateLimit-Remaining'] = str(rate_info['remaining'])
-            response_obj.headers['X-RateLimit-Reset'] = str(rate_info['reset'])
+            # Para rotas POST, verificar token CSRF (exceto rotas de verificação de status de pagamento)
+            if request.method == 'POST' and not (request.path and (
+                request.path.endswith('/verificar-pagamento') or 
+                request.path.endswith('/verificar_pagamento') or 
+                request.path.endswith('/check-payment-status') or 
+                request.path.endswith('/payment-status') or 
+                request.path.endswith('/check_for4payments_status') or 
+                request.path.endswith('/check_discount_payment_status') or 
+                request.path.endswith('/verificar_pagamento_frete')
+            )):
+                csrf_token = request.headers.get('X-CSRF-Token')
+                if not csrf_token or not verify_csrf_token(csrf_token):
+                    current_app.logger.warning("Token CSRF inválido ou ausente")
+                    return jsonify({'error': 'Token de segurança inválido ou expirado'}), 403
             
-            # Adicionar headers de segurança
-            response_obj.headers['X-Content-Type-Options'] = 'nosniff'
-            response_obj.headers['X-Frame-Options'] = 'DENY'
-            response_obj.headers['X-XSS-Protection'] = '1; mode=block'
+            # Limpar tokens CSRF expirados periodicamente
+            clean_expired_csrf_tokens()
             
-            # Retornar resposta com status code
-            if isinstance(response, tuple):
-                return response_obj, status_code
-            return response_obj
-        
+            # Se tudo estiver ok, prosseguir com a rota
+            return f(*args, **kwargs)
         return decorated_function
     return decorator

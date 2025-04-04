@@ -11,6 +11,9 @@ import logging
 import urllib.parse
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, abort, make_response
 
+from api_security import create_jwt_token, verify_jwt_token, generate_csrf_token, secure_api, verify_referer
+from transaction_tracker import get_client_ip, track_transaction_attempt, is_transaction_ip_banned, cleanup_transaction_tracking
+
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import redis
@@ -25,6 +28,15 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
+
+# Configuração de limpeza periódica dos dados de rastreamento
+@app.before_request
+def before_request():
+    """Executado antes de cada requisição"""
+    # Executar a limpeza periódica dos dados de rastreamento
+    # Isto é executado apenas ocasionalmente para evitar sobrecarga
+    if random.random() < 0.01:  # 1% das requisições
+        cleanup_transaction_tracking()
 
 # Initialize Redis-like storage for banned IPs (using dict for simplicity)
 BANNED_IPS = {}
@@ -975,6 +987,7 @@ def verificar_cpf(cpf=None):
     return render_template('verificar-cpf.html')
 
 @app.route('/api/create-discount-payment', methods=['POST'])
+@secure_api('create_discount_payment')
 def create_discount_payment():
     try:
         # Obter os dados do usuário da requisição
@@ -1004,6 +1017,7 @@ def create_discount_payment():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/check-payment-status')
+@secure_api('check_payment_status')
 def check_discount_payment_status():
     try:
         payment_id = request.args.get('id')
@@ -1140,8 +1154,60 @@ def thank_you():
         app.logger.error(f"[PROD] Erro na página de obrigado: {str(e)}")
         return jsonify({'error': 'Erro interno do servidor'}), 500
         
+@app.route('/csrf-token', methods=['GET'])
+@secure_api('csrf_token')
+def get_csrf_token():
+    """
+    Gera um novo token CSRF para proteção contra ataques CSRF
+    """
+    try:
+        # Gerar token CSRF para proteção adicional
+        csrf_token = generate_csrf_token()
+        
+        # Registrar um log da geração do token
+        client_ip = get_client_ip()
+        app.logger.info(f"[SECURANÇA] Novo token CSRF gerado para IP: {client_ip}")
+        
+        return jsonify({
+            'csrf_token': csrf_token,
+            'expires_in': 3600  # 1 hora em segundos
+        })
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao gerar token CSRF: {str(e)}")
+        return jsonify({'error': 'Erro interno ao gerar token de segurança'}), 500
+
+@app.route('/get-payment-token', methods=['POST'])
+@secure_api('get_payment_token')
+def get_payment_token():
+    """
+    Gera um token JWT que autoriza a criação de um pagamento PIX
+    Este token deve ser incluído nas requisições subsequentes para criar o pagamento
+    """
+    try:
+        # Dados do cliente (podem vir de um formulário ou sessão)
+        client_data = {
+            'ip': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent', ''),
+            'timestamp': int(time.time())
+        }
+        
+        # Criar token JWT válido por 10 minutos
+        token = create_jwt_token(client_data)
+        
+        # Gerar token CSRF para proteção adicional
+        csrf_token = generate_csrf_token()
+        
+        return jsonify({
+            'auth_token': token,
+            'csrf_token': csrf_token,
+            'expires_in': 10 * 60  # 10 minutos em segundos
+        })
+    except Exception as e:
+        app.logger.error(f"[PROD] Erro ao gerar token de pagamento: {str(e)}")
+        return jsonify({'error': 'Erro interno ao gerar token de pagamento'}), 500
+
 @app.route('/create-pix-payment', methods=['POST'])
-@check_referer
+@secure_api('create_pix_payment')
 def create_pix_payment():
     try:
         # Validar dados da requisição
@@ -1235,7 +1301,7 @@ def create_pix_payment():
         return jsonify({'error': 'Erro interno do servidor'}), 500
         
 @app.route('/verificar-pagamento', methods=['POST'])
-@check_referer
+@secure_api('check_payment_status')
 def verificar_pagamento():
     try:
         data = request.get_json()
@@ -1296,7 +1362,7 @@ def verificar_pagamento():
         return jsonify({'error': f'Erro ao verificar status: {str(e)}', 'status': 'error'}), 500
 
 @app.route('/check-for4payments-status', methods=['GET', 'POST'])
-@check_referer
+@secure_api('check_payment_status')
 def check_for4payments_status():
     try:
         transaction_id = request.args.get('transaction_id')
