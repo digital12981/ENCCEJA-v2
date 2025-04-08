@@ -2147,11 +2147,8 @@ def consultar_cpf_inscricao():
         cpf_numerico = cpf.replace('.', '').replace('-', '')
         
         # Usar a API Exato Digital para buscar os dados do CPF
-        token = os.environ.get("EXATO_DIGITAL_TOKEN")
-        if not token:
-            app.logger.error("[PROD] Token Exato Digital não encontrado nas variáveis de ambiente")
-            return jsonify({"error": "Erro de configuração do servidor"}), 500
-            
+        token = "268753a9b3a24819ae0f02159dee6724"  # Chave direta para a API Exato Digital
+        
         url = f"https://api.exato.digital/receita-federal/cpf?token={token}&cpf={cpf_numerico}&format=json"
         app.logger.info(f"[PROD] Consultando CPF {cpf_numerico} na API Exato Digital")
         
