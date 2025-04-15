@@ -75,6 +75,7 @@
         let currentStep = 1;
         let nomeSelecionado = null;
         let dataSelecionada = null;
+        let nivelSelecionado = null;
         let userData = null;
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -115,8 +116,8 @@
                     if (dataSelecionada) {
                         // Verificar se a data selecionada está correta
                         if (dataSelecionada === userData.dataNascimento) {
-                            // Avançar para o próximo passo (página de endereço)
-                            window.location.href = '/endereco';
+                            // Avançar para o próximo passo (seleção de nível escolar)
+                            showValidationStep(3);
                         } else {
                             alert("Data de nascimento incorreta! Por favor tente novamente.");
                             resetDateSelection();
@@ -124,6 +125,22 @@
                     } else {
                         alert("Selecione uma opção para prosseguir.");
                     }
+                } else if (currentStep === 3) {
+                    if (nivelSelecionado) {
+                        // Avançar para confirmação de pagamento
+                        showValidationStep(4);
+                        
+                        // Salvar o nível selecionado
+                        if (userData) {
+                            userData.nivelEscolar = nivelSelecionado;
+                            localStorage.setItem('cpfData', JSON.stringify(userData));
+                        }
+                    } else {
+                        alert("Selecione uma opção para prosseguir.");
+                    }
+                } else if (currentStep === 4) {
+                    // Botão "VOU REALIZAR O PAGAMENTO" que leva para a página de endereço
+                    window.location.href = '/endereco';
                 }
             });
         });
@@ -225,6 +242,16 @@
             document.getElementById('submit-button').disabled = true;
         }
         
+        function selectNivelOption(element, nivel) {
+            const options = document.querySelectorAll('#nivel-options .option-container');
+            options.forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            nivelSelecionado = nivel;
+            
+            // Habilitar botão
+            document.getElementById('submit-button').disabled = false;
+        }
+        
         function showValidationStep(step) {
             const steps = document.querySelectorAll('.validation-step');
             steps.forEach(s => s.classList.add('hidden'));
@@ -236,7 +263,18 @@
             document.getElementById('submit-button').disabled = true;
             
             // Atualizar o título do botão
-            document.getElementById('submit-button-text').textContent = 'Prosseguir';
+            if (step === 4) {
+                // Esconder o botão normal e mostrar apenas o botão de pagamento
+                document.getElementById('submit-button').style.display = 'none';
+                
+                // Configurar o botão de pagamento
+                document.getElementById('payment-button').addEventListener('click', function() {
+                    window.location.href = '/endereco';
+                });
+            } else {
+                document.getElementById('submit-button').style.display = 'flex';
+                document.getElementById('submit-button-text').textContent = 'Prosseguir';
+            }
         }
         
         // Função para embaralhar array (algoritmo Fisher-Yates)
@@ -316,6 +354,57 @@
                         </p>
                         <div id="date-options" class="mt-6">
                             <!-- Opções de data serão inseridas via JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="validation-step hidden" id="step-3">
+                        <p class="mb-4">
+                            Qual nível escolar você deseja obter com o seu diploma do ENCCEJA 2025?
+                        </p>
+                        <div id="nivel-options" class="mt-6">
+                            <div class="option-container rounded-md p-4 mb-3 cursor-pointer flex items-center" onclick="selectNivelOption(this, 'Fundamental')">
+                                <div class="option-selector flex-shrink-0 rounded-full h-6 w-6 mr-3 flex items-center justify-center text-sm font-bold">
+                                    1
+                                </div>
+                                <div class="flex-grow">Ensino Fundamental</div>
+                            </div>
+                            <div class="option-container rounded-md p-4 mb-3 cursor-pointer flex items-center" onclick="selectNivelOption(this, 'Médio')">
+                                <div class="option-selector flex-shrink-0 rounded-full h-6 w-6 mr-3 flex items-center justify-center text-sm font-bold">
+                                    2
+                                </div>
+                                <div class="flex-grow">Ensino Médio</div>
+                            </div>
+                            <div class="option-container rounded-md p-4 mb-3 cursor-pointer flex items-center" onclick="selectNivelOption(this, 'Fundamental e Médio')">
+                                <div class="option-selector flex-shrink-0 rounded-full h-6 w-6 mr-3 flex items-center justify-center text-sm font-bold">
+                                    3
+                                </div>
+                                <div class="flex-grow">Ensino Fundamental e Médio</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="validation-step hidden" id="step-4">
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-yellow-700 font-bold">Atenção: Taxa de Inscrição Obrigatória</h3>
+                                    <p class="text-yellow-700 text-sm">
+                                        O ENCCEJA 2025 possui uma Taxa de Inscrição Obrigatória no valor de <strong>R$47,80</strong>.
+                                    </p>
+                                    <p class="text-yellow-700 text-sm mt-2">
+                                        É obrigatório o pagamento desta taxa para prosseguir com sua inscrição e garantir sua participação no exame.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button id="payment-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded transition-all duration-200 ease-in-out">
+                                VOU REALIZAR O PAGAMENTO
+                            </button>
                         </div>
                     </div>
                 </div>
