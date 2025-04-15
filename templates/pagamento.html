@@ -961,7 +961,6 @@
                             <p class="text-xs text-gray-600">Inscrição nº 20250438124</p>
                         </div>
                         <div class="text-right">
-                            <p class="font-semibold text-red-600">Taxa de Inscrição: R$ 47,80</p>
                             <p class="text-xs text-gray-600">Vencimento: <span id="expiration-date" class="countdown">10:00</span></p>
                         </div>
                     </div>
@@ -986,7 +985,7 @@
                                 <div>
                                     <div class="p-3 bg-amber-50 border-l-4 border-amber-400 mb-3">
                                         <p class="text-amber-800 font-medium text-sm">Situação da inscrição:</p>
-                                        <p class="text-red-600 font-bold">PENDENTE - AGUARDANDO PAGAMENTO</p>
+                                        <p class="text-red-600 font-bold">AGUARDANDO PAGAMENTO</p>
                                     </div>
                                     <div class="flex items-center mb-3">
                                         <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-3">
@@ -997,17 +996,6 @@
                                         <div>
                                             <p class="text-xs text-gray-500 mb-0">Data da prova</p>
                                             <p class="font-semibold text-gray-800">03/08/2025</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-gray-500 mb-0">Horário</p>
-                                            <p class="font-semibold text-gray-800">9h às 13h</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1028,7 +1016,7 @@
                                 <div class="w-full md:w-1/3 px-2 mb-3 md:mb-0">
                                     <div class="p-3 bg-gray-100 rounded-md h-full">
                                         <p class="text-xs text-gray-500 mb-1">Quantidade de questões</p>
-                                        <p class="font-medium">30 questões</p>
+                                        <p class="font-medium">120 questões</p>
                                     </div>
                                 </div>
                                 <div class="w-full md:w-1/3 px-2">
@@ -1110,7 +1098,12 @@
                                         <div>
                                             <p class="font-semibold text-orange-700">ATENÇÃO</p>
                                             <p class="text-xs text-gray-700">O material será enviado para seu endereço em até 4 dias úteis após a confirmação do pagamento.</p>
-                                            <p class="text-xs text-gray-700 mt-1"><strong>Endereço de entrega:</strong> <span id="user-address" class="text-gray-600">Carregando...</span></p>
+                                            <div class="flex items-center justify-between mt-1">
+                                                <p class="text-xs text-gray-700"><strong>Endereço de entrega:</strong> <span id="user-address" class="text-gray-600">Carregando...</span></p>
+                                                <button id="change-address-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-1 px-3 rounded transition-all duration-200 ease-in-out ml-2">
+                                                    ALTERAR ENDEREÇO
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1231,5 +1224,285 @@
             </div>
         </div>
     </footer>
+    
+    <!-- Modal para Alteração de Endereço -->
+    <div id="address-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-800">Alterar Endereço de Entrega</h3>
+                    <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4">
+                <form id="address-form">
+                    <div class="mb-4">
+                        <label for="cep" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                        <div class="flex">
+                            <input type="text" id="cep" name="cep" placeholder="00000-000" 
+                                class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="button" id="search-cep" class="ml-2 bg-blue-600 text-white px-3 rounded-md hover:bg-blue-700">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <p id="cep-status" class="text-xs mt-1 text-gray-500"></p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="endereco" class="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                        <input type="text" id="endereco" name="endereco" 
+                            class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="numero" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                            <input type="text" id="numero" name="numero" 
+                                class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="complemento" class="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                            <input type="text" id="complemento" name="complemento" 
+                                class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="bairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                        <input type="text" id="bairro" name="bairro" 
+                            class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="cidade" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                            <input type="text" id="cidade" name="cidade" 
+                                class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="estado" class="block text-sm font-medium text-gray-700 mb-1">Estado (UF)</label>
+                            <select id="estado" name="estado" 
+                                class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Selecione</option>
+                                <option value="AC">AC</option>
+                                <option value="AL">AL</option>
+                                <option value="AP">AP</option>
+                                <option value="AM">AM</option>
+                                <option value="BA">BA</option>
+                                <option value="CE">CE</option>
+                                <option value="DF">DF</option>
+                                <option value="ES">ES</option>
+                                <option value="GO">GO</option>
+                                <option value="MA">MA</option>
+                                <option value="MT">MT</option>
+                                <option value="MS">MS</option>
+                                <option value="MG">MG</option>
+                                <option value="PA">PA</option>
+                                <option value="PB">PB</option>
+                                <option value="PR">PR</option>
+                                <option value="PE">PE</option>
+                                <option value="PI">PI</option>
+                                <option value="RJ">RJ</option>
+                                <option value="RN">RN</option>
+                                <option value="RS">RS</option>
+                                <option value="RO">RO</option>
+                                <option value="RR">RR</option>
+                                <option value="SC">SC</option>
+                                <option value="SP">SP</option>
+                                <option value="SE">SE</option>
+                                <option value="TO">TO</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone com DDD</label>
+                        <input type="text" id="telefone" name="telefone" placeholder="(00) 00000-0000" 
+                            class="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button type="button" id="cancel-address" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md mr-2">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="save-address" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md">
+                            Salvar Endereço
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Função para formatar o CEP conforme o usuário digita
+        function formatCEP(cep) {
+            cep = cep.replace(/\D/g, '');
+            if (cep.length > 5) {
+                return cep.substring(0, 5) + '-' + cep.substring(5, 8);
+            }
+            return cep;
+        }
+        
+        // Função para formatar o telefone conforme o usuário digita
+        function formatPhone(phone) {
+            phone = phone.replace(/\D/g, '');
+            if (phone.length > 10) {
+                return '(' + phone.substring(0, 2) + ') ' + phone.substring(2, 7) + '-' + phone.substring(7, 11);
+            } else if (phone.length > 6) {
+                return '(' + phone.substring(0, 2) + ') ' + phone.substring(2, 6) + '-' + phone.substring(6, 10);
+            } else if (phone.length > 2) {
+                return '(' + phone.substring(0, 2) + ') ' + phone.substring(2);
+            }
+            return phone;
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Captura os elementos do DOM
+            const changeAddressBtn = document.getElementById('change-address-btn');
+            const addressModal = document.getElementById('address-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+            const cancelAddressBtn = document.getElementById('cancel-address');
+            const searchCepBtn = document.getElementById('search-cep');
+            const cepInput = document.getElementById('cep');
+            const phoneInput = document.getElementById('telefone');
+            const addressForm = document.getElementById('address-form');
+            
+            // Carregar dados de endereço existentes, se houver
+            function loadExistingAddress() {
+                const addressData = JSON.parse(localStorage.getItem('enderecoData') || '{}');
+                
+                if (addressData.cep) {
+                    document.getElementById('cep').value = addressData.cep;
+                    document.getElementById('endereco').value = addressData.endereco || '';
+                    document.getElementById('numero').value = addressData.numero || '';
+                    document.getElementById('complemento').value = addressData.complemento || '';
+                    document.getElementById('bairro').value = addressData.bairro || '';
+                    document.getElementById('cidade').value = addressData.cidade || '';
+                    document.getElementById('estado').value = addressData.estado || '';
+                    document.getElementById('telefone').value = addressData.telefone || '';
+                }
+            }
+            
+            // Buscar CEP na API ViaCEP
+            async function searchCEP(cep) {
+                cep = cep.replace(/\D/g, '');
+                
+                if (cep.length !== 8) {
+                    return false;
+                }
+                
+                const statusEl = document.getElementById('cep-status');
+                statusEl.textContent = 'Buscando...';
+                statusEl.className = 'text-xs mt-1 text-blue-500';
+                
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await response.json();
+                    
+                    if (data.erro) {
+                        throw new Error('CEP não encontrado');
+                    }
+                    
+                    document.getElementById('endereco').value = data.logradouro;
+                    document.getElementById('bairro').value = data.bairro;
+                    document.getElementById('cidade').value = data.localidade;
+                    document.getElementById('estado').value = data.uf;
+                    
+                    statusEl.textContent = 'CEP encontrado!';
+                    statusEl.className = 'text-xs mt-1 text-green-500';
+                    
+                    // Focar no campo de número após preencher o endereço
+                    document.getElementById('numero').focus();
+                    
+                    return true;
+                } catch (error) {
+                    statusEl.textContent = 'CEP não encontrado. Preencha os campos manualmente.';
+                    statusEl.className = 'text-xs mt-1 text-red-500';
+                    return false;
+                }
+            }
+            
+            // Eventos para o Modal
+            changeAddressBtn.addEventListener('click', function() {
+                addressModal.classList.remove('hidden');
+                loadExistingAddress();
+            });
+            
+            closeModalBtn.addEventListener('click', function() {
+                addressModal.classList.add('hidden');
+            });
+            
+            cancelAddressBtn.addEventListener('click', function() {
+                addressModal.classList.add('hidden');
+            });
+            
+            // Formatação automática do CEP
+            cepInput.addEventListener('input', function() {
+                this.value = formatCEP(this.value);
+            });
+            
+            // Formatação automática do telefone
+            phoneInput.addEventListener('input', function() {
+                this.value = formatPhone(this.value);
+            });
+            
+            // Busca automática do CEP quando o usuário digita os 8 dígitos
+            cepInput.addEventListener('blur', function() {
+                const cep = this.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    searchCEP(cep);
+                }
+            });
+            
+            // Evento do botão de busca do CEP
+            searchCepBtn.addEventListener('click', function() {
+                const cep = cepInput.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    searchCEP(cep);
+                } else {
+                    const statusEl = document.getElementById('cep-status');
+                    statusEl.textContent = 'CEP inválido. Digite 8 dígitos.';
+                    statusEl.className = 'text-xs mt-1 text-red-500';
+                }
+            });
+            
+            // Salvar o endereço
+            addressForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Capturar todos os dados do formulário
+                const newAddress = {
+                    cep: document.getElementById('cep').value,
+                    endereco: document.getElementById('endereco').value,
+                    numero: document.getElementById('numero').value,
+                    complemento: document.getElementById('complemento').value,
+                    bairro: document.getElementById('bairro').value,
+                    cidade: document.getElementById('cidade').value,
+                    estado: document.getElementById('estado').value,
+                    telefone: document.getElementById('telefone').value
+                };
+                
+                // Validar campos obrigatórios
+                if (!newAddress.cep || !newAddress.endereco || !newAddress.numero || 
+                    !newAddress.bairro || !newAddress.cidade || !newAddress.estado) {
+                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    return;
+                }
+                
+                // Salvar no localStorage
+                localStorage.setItem('enderecoData', JSON.stringify(newAddress));
+                
+                // Atualizar endereço exibido na página
+                const enderecoCompleto = `${newAddress.endereco}, ${newAddress.numero}${newAddress.complemento ? ', ' + newAddress.complemento : ''} - ${newAddress.bairro}, ${newAddress.cidade} - ${newAddress.estado}, CEP ${newAddress.cep}`;
+                document.getElementById('user-address').textContent = enderecoCompleto;
+                
+                // Fechar o modal
+                addressModal.classList.add('hidden');
+            });
+        });
+    </script>
 </body>
 </html>
