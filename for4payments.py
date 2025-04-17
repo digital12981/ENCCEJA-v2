@@ -449,7 +449,7 @@ class For4PaymentsAPI:
             raise ValueError("CPF do usuário é obrigatório")
             
         # Valor fixo da taxa do Encceja
-        amount = 47.80
+        amount = 63.20
         current_app.logger.info(f"Valor da taxa: R$ {amount:.2f}")
         
         # Sanitização e preparação dos dados

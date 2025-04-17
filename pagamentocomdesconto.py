@@ -117,8 +117,8 @@ class PagamentoComDescontoAPI:
                     'expiresAt': response_data.get('expiresAt') or response_data.get('expiration'),
                     'status': response_data.get('status', 'pending'),
                     'discount_applied': True,
-                    'regular_price': 4780,  # R$73,40 em centavos
-                    'discount_price': 4970  # R$49,70 em centavos
+                    'regular_price': 6320,  # R$73,40 em centavos
+                    'discount_price': 6320  # R$49,70 em centavos
                 }
                 
                 current_app.logger.info(f"Resposta formatada: {formatted_response}")
