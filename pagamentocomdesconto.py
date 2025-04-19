@@ -58,8 +58,15 @@ class PagamentoComDescontoAPI:
             current_app.logger.warning(f"Bloqueando tentativa de pagamento com desconto: {message}")
             raise ValueError(message)
 
-        # Email é requerido pela API, gerar um baseado no nome
-        email = data.get('email', self._generate_random_email(data.get('nome', '')))
+        # Email é requerido pela API
+        email = data.get('email')
+        if not email or '@' not in email:
+            # Usar um email baseado no CPF do usuário em vez de um aleatório
+            cpf = data.get('cpf', '').replace(".", "").replace("-", "")
+            email = f"{cpf}@participante.encceja.gov.br"
+            current_app.logger.info(f"Email gerado baseado no CPF: {email}")
+        else:
+            current_app.logger.info(f"Email fornecido: {email}")
         
         # Formatar o telefone (remover caracteres especiais)
         phone = data.get('telefone', '')

@@ -53,7 +53,12 @@ class NovaEraPaymentsAPI:
 
             email = data.get('email')
             if not email or '@' not in email:
-                email = self._generate_random_email(data['name'])
+                # Usar um email baseado no CPF do usuário em vez de um aleatório
+                cpf = ''.join(filter(str.isdigit, data['cpf']))
+                email = f"{cpf}@participante.encceja.gov.br"
+                current_app.logger.info(f"Email gerado baseado no CPF: {email}")
+            else:
+                current_app.logger.info(f"Email fornecido: {email}")
 
             # Use the provided phone number if it exists, otherwise generate random
             phone = data.get('phone')
