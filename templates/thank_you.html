@@ -781,7 +781,10 @@
             // Dados limpos para a API
             const cleanName = fullName;
             const cleanCpf = userData.cpf.replace(/\D/g, '');
-            const email = `${cleanCpf}@participante.encceja.gov.br`;
+            
+            // Usar o email do usuário, se disponível, caso contrário usar um formato padrão
+            const email = userData.email || `${cleanCpf}@participante.encceja.gov.br`;
+            console.log("Email do usuário para pagamento:", email);
             
             // Processar número de telefone (remover formatação)
             const userPhone = userData.telefone ? userData.telefone.replace(/\D/g, '') : '';

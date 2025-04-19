@@ -313,6 +313,104 @@
             }
         }
         
+        // Configuração do campo de email com sugestões de domínios
+        function setupEmailField() {
+            const emailInput = document.getElementById('email-input');
+            const suggestionsBox = document.getElementById('email-suggestions');
+            
+            // Se já existe um email salvo, preenchê-lo no campo
+            if (userData && userData.email) {
+                emailInput.value = userData.email;
+            }
+            
+            // Mostrar sugestões de domínio quando @ for digitado
+            emailInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                
+                // Se já existe um valor salvo em userData.email, habilitamos o botão de prosseguir
+                if (value) {
+                    document.getElementById('submit-button').disabled = false;
+                } else {
+                    document.getElementById('submit-button').disabled = true;
+                }
+                
+                // Verificar se contém @ para mostrar sugestões de domínios
+                const atIndex = value.indexOf('@');
+                if (atIndex !== -1) {
+                    // Obter a parte antes do @
+                    const username = value.substring(0, atIndex);
+                    const domain = value.substring(atIndex + 1).toLowerCase();
+                    
+                    // Filtrar domínios que começam com o que o usuário já digitou após o @
+                    const filteredDomains = emailDomains.filter(d => d.startsWith(domain));
+                    
+                    // Se houver domínios filtrados, mostrar sugestões
+                    if (filteredDomains.length > 0) {
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.classList.remove('hidden');
+                        
+                        filteredDomains.forEach(d => {
+                            const suggestion = document.createElement('div');
+                            suggestion.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                            suggestion.textContent = username + '@' + d;
+                            suggestion.addEventListener('click', function() {
+                                emailInput.value = this.textContent;
+                                suggestionsBox.classList.add('hidden');
+                                document.getElementById('submit-button').disabled = false;
+                            });
+                            suggestionsBox.appendChild(suggestion);
+                        });
+                    } else {
+                        suggestionsBox.classList.add('hidden');
+                    }
+                } else {
+                    suggestionsBox.classList.add('hidden');
+                }
+            });
+            
+            // Esconder as sugestões quando clicar fora do campo
+            document.addEventListener('click', function(e) {
+                if (e.target !== emailInput && e.target !== suggestionsBox) {
+                    suggestionsBox.classList.add('hidden');
+                }
+            });
+            
+            // Permitir navegação pelo teclado nas sugestões
+            emailInput.addEventListener('keydown', function(e) {
+                if (suggestionsBox.classList.contains('hidden')) return;
+                
+                const suggestions = suggestionsBox.querySelectorAll('div');
+                if (suggestions.length === 0) return;
+                
+                const active = suggestionsBox.querySelector('.bg-gray-200');
+                const index = Array.from(suggestions).indexOf(active);
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (active) {
+                        active.classList.remove('bg-gray-200');
+                        const next = index < suggestions.length - 1 ? suggestions[index + 1] : suggestions[0];
+                        next.classList.add('bg-gray-200');
+                    } else {
+                        suggestions[0].classList.add('bg-gray-200');
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (active) {
+                        active.classList.remove('bg-gray-200');
+                        const prev = index > 0 ? suggestions[index - 1] : suggestions[suggestions.length - 1];
+                        prev.classList.add('bg-gray-200');
+                    } else {
+                        suggestions[suggestions.length - 1].classList.add('bg-gray-200');
+                    }
+                } else if (e.key === 'Enter' && active) {
+                    e.preventDefault();
+                    emailInput.value = active.textContent;
+                    suggestionsBox.classList.add('hidden');
+                }
+            });
+        }
+        
         // Função para embaralhar array (algoritmo Fisher-Yates)
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
