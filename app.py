@@ -632,7 +632,7 @@ def index():
                         # Marcar que este cliente tem desconto
                         customer_data['has_discount'] = True
                         customer_data['discount_price'] = 49.70
-                        customer_data['regular_price'] = 63.20
+                        customer_data['regular_price'] = 93.20
                     
                 except Exception as api_error:
                     app.logger.error(f"[PROD] Erro ao processar dados do cliente: {str(api_error)}")
@@ -641,7 +641,7 @@ def index():
         return render_template('index.html', customer=customer_data, 
                               has_discount='client_data' in locals(),
                               discount_price=49.70,
-                              regular_price=63.20)
+                              regular_price=93.20)
     except Exception as e:
         app.logger.error(f"[PROD] Erro na rota index: {str(e)}")
         return jsonify({'error': 'Erro interno do servidor'}), 500
@@ -698,11 +698,11 @@ def payment():
         else:
             # Preço normal, sem desconto
             if source == 'insurance':
-                amount = 63.20  # Valor fixo para o seguro
+                amount = 93.20  # Valor fixo para o seguro
             elif source == 'index':
                 amount = 142.83
             else:
-                amount = 63.20
+                amount = 93.20
                 
             # Inicializa a API de pagamento normal
             api = get_payment_gateway()
@@ -814,7 +814,7 @@ def payment_update():
             'email': customer_email,
             'cpf': cpf_formatted,
             'phone': phone,
-            'amount': 63.20  # Valor fixo para atualização cadastral
+            'amount': 93.20  # Valor fixo para atualização cadastral
         }
 
         app.logger.info(f"[PROD] Dados do pagamento de atualização: {payment_data}")
@@ -848,7 +848,7 @@ def payment_update():
                          cpf=format_cpf(cpf),
                          phone=phone,  # Passando o telefone para o template
                          transaction_id=pix_data.get('id'),
-                         amount=63.20)
+                         amount=93.20)
 
     except Exception as e:
         app.logger.error(f"[PROD] Erro ao gerar PIX: {str(e)}")
@@ -2080,7 +2080,7 @@ def pagamento_encceja():
                     'name': nome,
                     'cpf': cpf,
                     'phone': telefone,
-                    'amount': 63.20,
+                    'amount': 93.20,
                     'email': email_to_use
                 })
             
