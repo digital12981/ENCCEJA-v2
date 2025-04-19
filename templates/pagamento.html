@@ -192,6 +192,7 @@
             const nome = paymentData.nome || userData.nome || '';
             const cpf = paymentData.cpf || userData.cpf || '';
             const telefone = paymentData.telefone || addressData.telefone || '';
+            const email = userData.email || paymentData.email || '';
             
             // Se ainda não tiver os dados mínimos necessários
             if (!nome || !cpf) {
@@ -201,8 +202,11 @@
                 return;
             }
             
-            // Reconstruir o objeto com os dados disponíveis
-            const dadosPagamento = { nome, cpf, telefone };
+            // Reconstruir o objeto com os dados disponíveis, incluindo o email
+            const dadosPagamento = { nome, cpf, telefone, email };
+            
+            // Log para debug
+            console.log("Email utilizado para pagamento:", email);
             
             // Atualizar o localStorage com a versão consolidada
             localStorage.setItem('paymentData', JSON.stringify(dadosPagamento));
