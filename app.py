@@ -2051,13 +2051,18 @@ def pagamento_encceja():
                 })
             else:
                 # Usar API de pagamento através do gateway configurado
-                app.logger.info(f"[PROD] Criando pagamento regular para: {nome} ({cpf})")
+                # Obter o email do usuário, se disponível
+                email = data.get('email')
+                # Usar o email do usuário ou criar um padrão baseado no CPF
+                email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
+                
+                app.logger.info(f"[PROD] Criando pagamento regular para: {nome} ({cpf}) email: {email_to_use}")
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
                     'phone': telefone,
                     'amount': 63.20,
-                    'email': f"{nome.lower().replace(' ', '')}@gmail.com"
+                    'email': email_to_use
                 })
             
             # Retornar os dados do pagamento
