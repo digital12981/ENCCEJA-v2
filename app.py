@@ -1929,13 +1929,18 @@ def comprar_livro():
             payment_api = get_payment_gateway()
             
             # Criar pagamento do livro (R$ 143,10)
-            app.logger.info(f"[PROD] Criando pagamento de livro digital para: {nome} ({cpf})")
+            # Obter o email do usuário, se disponível
+            email = request.args.get('email')
+            # Usar o email do usuário ou criar um padrão baseado no CPF
+            email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
+            
+            app.logger.info(f"[PROD] Criando pagamento de livro digital para: {nome} ({cpf}) com email: {email_to_use}")
             payment_result = payment_api.create_pix_payment({
                 'name': nome,
                 'cpf': cpf,
                 'phone': telefone,
                 'amount': 143.10,  # Valor específico do livro digital
-                'email': f"{nome.lower().replace(' ', '')}@gmail.com"
+                'email': email_to_use
             })
             
             app.logger.info(f"[PROD] Pagamento de livro criado: {payment_result.get('id')}")

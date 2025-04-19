@@ -1,0 +1,53 @@
+{
+  "utm": "",
+  "dueAt": null,
+  "items": [
+    {
+      "id": "b59fba58-bb86-489e-b313-f64c5e0fc12a",
+      "title": "Inscrição Petrobras 2025",
+      "quantity": 1,
+      "tangible": false,
+      "paymentId": "924f79b0-a1cd-4f94-bae6-75cb2c6ac6ee",
+      "unitPrice": 6320
+    }
+  ],
+  "status": "PENDING",
+  "pixCode": "00020126870014br.gov.bcb.pix2565pix.primepag.com.br/qr/v3/at/a82c21d6-3d15-422e-a4cb-6b3d9e7939ca5204000053039865802BR5925PAGAMENTO SEGURO INTERMED6006SOBRAL62070503***630481C7",
+  "customId": "FOR842211101493193",
+  "customer": {
+    "id": "ae11a8ac-86bd-47ec-bea6-51560b2fb67f",
+    "cep": null,
+    "cpf": "03939004103",
+    "city": null,
+    "name": "IZABELLA GOMES CRISPIM MACIEL",
+    "email": "03939004103@participante.encceja.gov.br",
+    "phone": "+5561982132603",
+    "state": null,
+    "number": null,
+    "street": null,
+    "district": null,
+    "createdAt": "2025-04-19T04:53:45.810Z",
+    "updatedAt": "2025-04-19T04:53:45.810Z",
+    "complement": null
+  },
+  "netValue": 5741,
+  "billetUrl": null,
+  "createdAt": "2025-04-19T04:53:45.868Z",
+  "expiresAt": null,
+  "paymentId": "924f79b0-a1cd-4f94-bae6-75cb2c6ac6ee",
+  "pixQrCode": "data:image/png;base64,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",
+  "timestamp": 1745038432251,
+  "updatedAt": "2025-04-19T04:53:46.187Z",
+  "approvedAt": null,
+  "billetCode": null,
+  "externalId": "",
+  "refundedAt": null,
+  "rejectedAt": null,
+  "totalValue": 6320,
+  "checkoutUrl": "",
+  "referrerUrl": "",
+  "chargebackAt": null,
+  "installments": null,
+  "paymentMethod": "PIX",
+  "deliveryStatus": null
+}
