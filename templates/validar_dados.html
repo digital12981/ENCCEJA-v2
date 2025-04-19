@@ -76,7 +76,22 @@
         let nomeSelecionado = null;
         let dataSelecionada = null;
         let nivelSelecionado = null;
+        let emailDigitado = null;
         let userData = null;
+        
+        // Lista de domínios comuns para sugestão
+        const emailDomains = [
+            'gmail.com',
+            'outlook.com',
+            'hotmail.com',
+            'yahoo.com.br',
+            'icloud.com',
+            'uol.com.br',
+            'terra.com.br',
+            'bol.com.br',
+            'globo.com',
+            'yahoo.com'
+        ];
         
         document.addEventListener('DOMContentLoaded', function() {
             // Carregar dados do CPF do localStorage
@@ -94,6 +109,9 @@
             
             // Preencher as opções de nome
             fillNameOptions();
+            
+            // Configurar o campo de email com autosugestões de domínios
+            setupEmailField();
             
             // Configurar botão de prosseguir
             const submitBtn = document.getElementById('submit-button');
@@ -127,12 +145,30 @@
                     }
                 } else if (currentStep === 3) {
                     if (nivelSelecionado) {
+                        // Verificar se o email foi digitado
+                        const emailInput = document.getElementById('email-input');
+                        const email = emailInput.value.trim();
+                        
+                        if (!email) {
+                            alert("Por favor, digite seu email para prosseguir.");
+                            emailInput.focus();
+                            return;
+                        }
+                        
+                        // Validação simples de email
+                        if (!email.includes('@') || !email.includes('.')) {
+                            alert("Por favor, digite um email válido.");
+                            emailInput.focus();
+                            return;
+                        }
+                        
                         // Avançar para confirmação de pagamento
                         showValidationStep(4);
                         
-                        // Salvar o nível selecionado
+                        // Salvar o nível selecionado e o email
                         if (userData) {
                             userData.nivelEscolar = nivelSelecionado;
+                            userData.email = email;
                             localStorage.setItem('cpfData', JSON.stringify(userData));
                         }
                     } else {
@@ -379,6 +415,20 @@
                                     3
                                 </div>
                                 <div class="flex-grow">Ensino Fundamental e Médio</div>
+                            </div>
+                        </div>
+
+                        <p class="mb-4 mt-8">
+                            Qual seu email para receber comunicações sobre a prova?
+                        </p>
+                        <div class="mt-4">
+                            <div class="mb-4">
+                                <input type="email" id="email-input" placeholder="Seu email para receber informações sobre a prova" 
+                                       class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                                <div id="email-suggestions" class="hidden mt-1 border border-gray-300 rounded-md bg-white shadow-sm">
+                                    <!-- Sugestões de domínios de email serão inseridas via JavaScript -->
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">Importante: digite seu email corretamente para receber seu local de prova</p>
                             </div>
                         </div>
                     </div>
