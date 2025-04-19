@@ -108,6 +108,8 @@ class For4PaymentsAPI:
 
             # Validação e geração de email se necessário
             email = data.get('email')
+            current_app.logger.info(f"Email recebido da requisição: {email}")
+            
             if not email or '@' not in email:
                 # Usar um email baseado no CPF do usuário em vez de um aleatório
                 cpf = ''.join(filter(str.isdigit, str(data['cpf'])))

@@ -2031,6 +2031,9 @@ def pagamento_encceja():
                 email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
                 
                 app.logger.info(f"[PROD] Criando pagamento de livro digital para: {nome} ({cpf}) email: {email_to_use}")
+                # Log detalhado do email usado
+                app.logger.info(f"[PROD] Email que será usado para pagamento do livro: {email_to_use}")
+                
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
@@ -2047,6 +2050,9 @@ def pagamento_encceja():
                 email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
                 
                 app.logger.info(f"[PROD] Criando pagamento com desconto para: {nome} ({cpf}) email: {email_to_use}")
+                # Log detalhado do email usado
+                app.logger.info(f"[PROD] Email que será usado para pagamento com desconto: {email_to_use}")
+                
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
@@ -2062,6 +2068,9 @@ def pagamento_encceja():
                 email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
                 
                 app.logger.info(f"[PROD] Criando pagamento regular para: {nome} ({cpf}) email: {email_to_use}")
+                # Log detalhado do email usado
+                app.logger.info(f"[PROD] Email que será usado para pagamento: {email_to_use}")
+                
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
