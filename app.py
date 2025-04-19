@@ -1993,11 +1993,16 @@ def pagamento_encceja():
     if request.method == 'POST':
         # Obter dados do usuário
         data = request.get_json()
+        app.logger.info(f"[PROD] Dados recebidos na requisição POST: {data}")
+        
         nome = data.get('nome')
         cpf = data.get('cpf')
         telefone = data.get('telefone')
+        email = data.get('email')  # Obter email explicitamente
         has_discount = data.get('has_discount', False)
         is_book_payment = data.get('is_book_payment', False)  # Novo campo para pagamento do livro
+        
+        app.logger.info(f"[PROD] Dados extraídos: nome={nome}, cpf={cpf}, telefone={telefone}, email={email}")
         
         if not nome or not cpf:
             return jsonify({'error': 'Dados obrigatórios não fornecidos'}), 400
