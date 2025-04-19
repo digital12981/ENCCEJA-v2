@@ -656,6 +656,7 @@ def payment():
         nome = request.args.get('nome')
         cpf = request.args.get('cpf')
         phone = request.args.get('phone')  # Get phone from query params
+        email = request.args.get('email')  # Get email from query params
         source = request.args.get('source', 'index')
         has_discount = request.args.get('has_discount', 'false').lower() == 'true'
 
@@ -663,13 +664,13 @@ def payment():
             app.logger.error("[PROD] Nome ou CPF não fornecidos")
             return jsonify({'error': 'Nome e CPF são obrigatórios'}), 400
 
-        app.logger.info(f"[PROD] Dados do cliente: nome={nome}, cpf={cpf}, phone={phone}, source={source}, has_discount={has_discount}")
+        app.logger.info(f"[PROD] Dados do cliente: nome={nome}, cpf={cpf}, phone={phone}, email={email}, source={source}, has_discount={has_discount}")
 
         # Formata o CPF removendo pontos e traços
         cpf_formatted = ''.join(filter(str.isdigit, cpf))
 
-        # Gera um email aleatório baseado no nome do cliente
-        customer_email = generate_random_email(nome)
+        # Usa o email informado pelo usuário ou cria um baseado no CPF se não estiver disponível
+        customer_email = email if email else f"{cpf_formatted}@participante.encceja.gov.br"
 
         # Use provided phone if available, otherwise generate random
         customer_phone = ''.join(filter(str.isdigit, phone)) if phone else generate_random_phone()
@@ -781,12 +782,13 @@ def payment_update():
         nome = request.args.get('nome')
         cpf = request.args.get('cpf')
         phone = request.args.get('phone', '') # Adicionar parâmetro phone
+        email = request.args.get('email', '') # Adicionar parâmetro email
 
         if not nome or not cpf:
             app.logger.error("[PROD] Nome ou CPF não fornecidos")
             return jsonify({'error': 'Nome e CPF são obrigatórios'}), 400
 
-        app.logger.info(f"[PROD] Dados do cliente para atualização: nome={nome}, cpf={cpf}, phone={phone}")
+        app.logger.info(f"[PROD] Dados do cliente para atualização: nome={nome}, cpf={cpf}, phone={phone}, email={email}")
 
         # Inicializa a API usando nossa factory
         api = get_payment_gateway()
@@ -794,8 +796,8 @@ def payment_update():
         # Formata o CPF removendo pontos e traços
         cpf_formatted = ''.join(filter(str.isdigit, cpf))
 
-        # Gera um email aleatório baseado no nome do cliente
-        customer_email = generate_random_email(nome)
+        # Usa o email informado pelo usuário ou cria um baseado no CPF se não estiver disponível
+        customer_email = email if email else f"{cpf_formatted}@participante.encceja.gov.br"
 
         # Usa o telefone informado pelo usuário ou gera um se não estiver disponível
         if not phone:
@@ -2018,24 +2020,34 @@ def pagamento_encceja():
             
             if is_book_payment:
                 # Pagamento do livro digital (R$ 143,10)
-                app.logger.info(f"[PROD] Criando pagamento de livro digital para: {nome} ({cpf})")
+                # Obter o email do usuário, se disponível
+                email = data.get('email')
+                # Usar o email do usuário ou criar um padrão baseado no CPF
+                email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
+                
+                app.logger.info(f"[PROD] Criando pagamento de livro digital para: {nome} ({cpf}) email: {email_to_use}")
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
                     'phone': telefone,
                     'amount': 143.10,  # Valor específico do livro digital
-                    'email': f"{nome.lower().replace(' ', '')}@gmail.com"
+                    'email': email_to_use
                 })
                 app.logger.info(f"[PROD] Pagamento de livro criado: {payment_result.get('id')}")
             elif has_discount:
                 # Usar API de pagamento através do gateway configurado
-                app.logger.info(f"[PROD] Criando pagamento com desconto para: {nome} ({cpf})")
+                # Obter o email do usuário, se disponível
+                email = data.get('email')
+                # Usar o email do usuário ou criar um padrão baseado no CPF
+                email_to_use = email if email else f"{cpf.replace('.', '').replace('-', '')}@participante.encceja.gov.br"
+                
+                app.logger.info(f"[PROD] Criando pagamento com desconto para: {nome} ({cpf}) email: {email_to_use}")
                 payment_result = payment_api.create_pix_payment({
                     'name': nome,
                     'cpf': cpf,
                     'phone': telefone,
                     'amount': 49.70,
-                    'email': f"{nome.lower().replace(' ', '')}@gmail.com"
+                    'email': email_to_use
                 })
             else:
                 # Usar API de pagamento através do gateway configurado
